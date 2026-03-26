@@ -37,9 +37,9 @@ const GOLD = "#b8941f";
 const BG_DARK = "#1a1a2a";
 const TEXT_MUTED = "#9ca3af";
 
-const LANE_HEIGHT = 36;
-const TRACK_PADDING_LEFT = 90;
-const TRACK_PADDING_RIGHT = 40;
+const LANE_HEIGHT = 46;
+const TRACK_PADDING_LEFT = 110;
+const TRACK_PADDING_RIGHT = 36;
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -235,12 +235,12 @@ export default function LiveRaceView({
               {/* Horse name + post position label */}
               <div className="shrink-0 flex items-center gap-1.5 px-2" style={{ width: TRACK_PADDING_LEFT }}>
                 <div
-                  className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0"
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
                   style={{ background: h.color }}
                 >
                   {i + 1}
                 </div>
-                <span className="text-[10px] font-semibold truncate" style={{ color: "rgba(255,255,255,0.7)" }}>
+                <span className="text-[11px] font-semibold truncate" style={{ color: "rgba(255,255,255,0.7)" }}>
                   {h.name}
                 </span>
               </div>
@@ -249,7 +249,7 @@ export default function LiveRaceView({
               <div className="flex-1 relative h-full" style={{ marginRight: TRACK_PADDING_RIGHT }}>
                 {/* Trail */}
                 <div
-                  className="absolute top-1/2 -translate-y-1/2 h-[3px] rounded-full"
+                  className="absolute top-1/2 -translate-y-1/2 h-[4px] rounded-full"
                   style={{
                     left: 0,
                     width: `${xPercent}%`,
@@ -267,7 +267,7 @@ export default function LiveRaceView({
                     transition: "left 0.2s ease-out",
                   }}
                 >
-                  <HorseSilhouette color={h.color} galloping={isGalloping} size={30} />
+                  <HorseSilhouette color={h.color} galloping={isGalloping} size={36} />
                 </motion.div>
               </div>
 

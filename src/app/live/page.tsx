@@ -88,11 +88,14 @@ const RACE_NAMES = [
 const CONDITIONS = ["Fast", "Good", "Yielding", "Firm"];
 
 // Phase durations in seconds
-const CYCLE_DURATION = 420; // 7 minutes total
-const BETTING_DURATION = 300; // 5 minutes to bet
-const POST_PARADE_DURATION = 20; // 20 second gate load
-const RACING_DURATION = 30; // 30 seconds for race (longer for drama)
-const RESULTS_DURATION = CYCLE_DURATION - BETTING_DURATION - POST_PARADE_DURATION - RACING_DURATION; // 70 sec
+// Import shared timing constants
+import {
+  CYCLE_DURATION,
+  BETTING_DURATION,
+  POST_PARADE_DURATION,
+  RACING_DURATION,
+  RESULTS_DURATION,
+} from "@/lib/constants/race-timing";
 
 type Phase = "betting" | "post_parade" | "racing" | "results";
 
@@ -209,40 +212,14 @@ function seededPick<T>(arr: T[], rand: () => number): T {
   return arr[Math.floor(rand() * arr.length)];
 }
 
-/* ================================================================== */
-/*  Race Epoch                                                         */
-/* ================================================================== */
-
-function getCurrentEpoch(): number {
-  return Math.floor(Date.now() / (CYCLE_DURATION * 1000));
-}
-
-function getTimeInCycle(): number {
-  return (Date.now() / 1000) % CYCLE_DURATION;
-}
-
-function getPhaseFromCycleTime(t: number): Phase {
-  if (t < BETTING_DURATION) return "betting";
-  if (t < BETTING_DURATION + POST_PARADE_DURATION) return "post_parade";
-  if (t < BETTING_DURATION + POST_PARADE_DURATION + RACING_DURATION) return "racing";
-  return "results";
-}
-
-function getPhaseTimer(t: number): number {
-  if (t < BETTING_DURATION) return Math.ceil(BETTING_DURATION - t);
-  if (t < BETTING_DURATION + POST_PARADE_DURATION) return Math.ceil(BETTING_DURATION + POST_PARADE_DURATION - t);
-  if (t < BETTING_DURATION + POST_PARADE_DURATION + RACING_DURATION)
-    return Math.ceil(BETTING_DURATION + POST_PARADE_DURATION + RACING_DURATION - t);
-  return Math.ceil(CYCLE_DURATION - t);
-}
-
-function getRaceProgress(t: number): number {
-  const raceStart = BETTING_DURATION + POST_PARADE_DURATION;
-  const raceEnd = raceStart + RACING_DURATION;
-  if (t < raceStart) return 0;
-  if (t >= raceEnd) return 1;
-  return (t - raceStart) / RACING_DURATION;
-}
+// Re-export shared timing functions used in this file
+import {
+  getCurrentEpoch,
+  getTimeInCycle,
+  getPhaseFromCycleTime,
+  getPhaseTimer,
+  formatRaceTimer as formatTimer,
+} from "@/lib/constants/race-timing";
 
 /* ================================================================== */
 /*  Helpers                                                            */
@@ -436,11 +413,6 @@ function getHorseImage(name: string): string | null {
   return profile?.imageUrl ?? null;
 }
 
-function formatTimer(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, "0")}`;
-}
 
 /* ================================================================== */
 /*  localStorage User Management                                       */
@@ -1702,7 +1674,6 @@ export default function LiveRacingPage() {
   const [showCelebration, setShowCelebration] = useState(false);
   const [totalWinnings, setTotalWinnings] = useState(0);
   const [totalWagered, setTotalWagered] = useState(0);
-  const [resultsProcessed, setResultsProcessed] = useState(false);
 
   /* ---- Refs ---- */
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -1773,7 +1744,6 @@ export default function LiveRacingPage() {
         setShowCelebration(false);
         setTotalWinnings(0);
         setTotalWagered(0);
-        setResultsProcessed(false);
         resultsProcessedRef.current = false;
       }
 
@@ -1808,7 +1778,6 @@ export default function LiveRacingPage() {
   useEffect(() => {
     if (phase !== "results" || !race || finishOrder.length === 0 || resultsProcessedRef.current) return;
     resultsProcessedRef.current = true;
-    setResultsProcessed(true);
 
     const results: BetResult[] = bets.map((bet) => {
       const { won, payout } = calculateBetPayout(bet, finishOrder, race.odds);
@@ -2034,7 +2003,7 @@ export default function LiveRacingPage() {
         {race && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 pb-8">
             {/* ──── Left: Bet Slip / Results ──── */}
-            <div className="lg:col-span-4 space-y-4">
+            <div className="lg:col-span-3 space-y-4">
               {phase === "betting" && user && (
                 <div className="p-4 rounded-2xl" style={{ background: BG_WHITE, border: `1.5px solid ${BORDER}` }}>
                   <div className="flex items-center justify-between mb-3">
@@ -2119,7 +2088,7 @@ export default function LiveRacingPage() {
             </div>
 
             {/* ──── Center: Race Track ──── */}
-            <div className="lg:col-span-5">
+            <div className="lg:col-span-6">
               <div className="relative rounded-2xl overflow-hidden" style={{ border: `1.5px solid ${BORDER}` }}>
                 {/* Win celebration overlay */}
                 <AnimatePresence>

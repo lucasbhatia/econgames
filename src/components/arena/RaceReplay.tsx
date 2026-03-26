@@ -36,8 +36,8 @@ const TEXT_MUTED = "#9ca3af";
 const BORDER_DARK = "rgba(255,255,255,0.08)";
 
 const BASE_DURATION = 10; // seconds at 1x
-const LANE_HEIGHT = 32;
-const LABEL_WIDTH = 100;
+const LANE_HEIGHT = 44;
+const LABEL_WIDTH = 110;
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -244,7 +244,7 @@ export default function RaceReplay({ horses, colors, distance }: RaceReplayProps
                 <div className="absolute top-1/2 -translate-y-1/2 h-[2px] rounded-full" style={{ left: 0, width: `${xPercent}%`, background: `linear-gradient(to right, transparent, ${h.color}50)`, transition: "width 0.15s ease-out" }} />
                 {/* Horse */}
                 <div className="absolute top-1/2" style={{ left: `${xPercent}%`, transform: "translate(-100%, -50%)", transition: "left 0.15s ease-out" }}>
-                  <HorseSilhouette color={h.color} galloping={isGalloping} size={22} />
+                  <HorseSilhouette color={h.color} galloping={isGalloping} size={32} />
                 </div>
               </div>
 

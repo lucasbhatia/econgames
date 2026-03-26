@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import Navbar from "@/components/layout/Navbar";
+import Providers from "@/components/layout/Providers";
 import "./globals.css";
 
 const inter = Inter({
@@ -30,8 +31,10 @@ export default function RootLayout({
       className={`${inter.variable} ${jetbrains.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-white text-[#1a1a2a]">
-        <Navbar />
-        <main>{children}</main>
+        <Providers>
+          <Navbar />
+          <main>{children}</main>
+        </Providers>
       </body>
     </html>
   );

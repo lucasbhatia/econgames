@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRaceClock } from "@/lib/context/RaceClockContext";
+import { formatRaceTimer, PHASE_LABELS } from "@/lib/constants/race-timing";
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
@@ -15,16 +17,29 @@ const NAV_LINKS = [
   { href: "/simulate", label: "Simulate" },
 ];
 
+const PHASE_COLORS: Record<string, string> = {
+  betting: "#b8941f",
+  post_parade: "#ea580c",
+  racing: "#ef4444",
+  results: "#2563eb",
+};
+
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
+  const { phase, timer } = useRaceClock();
 
   useEffect(() => {
+    setMounted(true);
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  const phaseColor = PHASE_COLORS[phase] ?? "#b8941f";
+  const isLivePage = pathname === "/live";
 
   return (
     <nav
@@ -59,14 +74,57 @@ export default function Navbar() {
               </Link>
             );
           })}
+
+          {/* Race timer pill — always visible, links to /live */}
+          {mounted && !isLivePage && (
+            <Link
+              href="/live"
+              className="ml-2 flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all hover:scale-105"
+              style={{
+                background: `${phaseColor}10`,
+                border: `1.5px solid ${phaseColor}30`,
+              }}
+            >
+              <motion.div
+                animate={phase === "racing" ? { opacity: [1, 0.3, 1] } : {}}
+                transition={phase === "racing" ? { repeat: Infinity, duration: 0.8 } : {}}
+                className="w-2 h-2 rounded-full"
+                style={{ background: phaseColor }}
+              />
+              <span className="text-xs font-mono font-bold" style={{ color: phaseColor }}>
+                {formatRaceTimer(timer)}
+              </span>
+              <span className="text-[10px] font-semibold" style={{ color: phaseColor }}>
+                {PHASE_LABELS[phase]}
+              </span>
+            </Link>
+          )}
         </div>
 
-        <button
-          onClick={() => setMobileOpen(!mobileOpen)}
-          className="md:hidden text-[#6b7280] p-1"
-        >
-          {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
+        {/* Mobile: timer + hamburger */}
+        <div className="flex items-center gap-2 md:hidden">
+          {mounted && (
+            <Link
+              href="/live"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+              style={{
+                background: `${phaseColor}10`,
+                border: `1px solid ${phaseColor}25`,
+              }}
+            >
+              <div className="w-1.5 h-1.5 rounded-full" style={{ background: phaseColor }} />
+              <span className="text-[11px] font-mono font-bold" style={{ color: phaseColor }}>
+                {formatRaceTimer(timer)}
+              </span>
+            </Link>
+          )}
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="text-[#6b7280] p-1"
+          >
+            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
       </div>
 
       <AnimatePresence>
