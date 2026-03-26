@@ -287,20 +287,81 @@ function generateSeededRace(epoch: number): RaceCard {
   const track = seededPick(TRACK_CONFIGS, rand);
   const name = seededPick(RACE_NAMES, rand);
 
-  // Run Monte Carlo for odds (uses Math.random but that's fine for odds)
-  const simResults = runMonteCarlo({
-    horses,
-    distanceFurlongs: distance,
-    surface,
-    trackBias: track.bias,
-    numSimulations: 500,
+  // Generate realistic odds using power ratings based on horse data
+  // Instead of pure Monte Carlo (which is too noisy with small samples),
+  // compute a power rating from speed, consistency, running style fit, etc.
+  const odds: Record<string, { win: number; place: number; show: number }> = {};
+
+  // Step 1: Compute a "power rating" for each horse
+  const ratings: { name: string; power: number }[] = horses.map((h) => {
+    const profile = ALL_PROFILES.find((p) => p.name === h.name);
+    let power = h.avgSpeed * 5; // base from avg speed
+
+    // Bonus for top speed
+    power += h.topSpeed * 2;
+
+    // Consistency bonus (lower consistency value = more consistent = better)
+    power += (1 - h.consistency) * 8;
+
+    // Distance fit: check if horse's best distance matches race distance
+    if (profile) {
+      const bestDist = parseFloat(profile.bestDistance.replace("F", ""));
+      const distDiff = Math.abs(bestDist - distance);
+      power -= distDiff * 3; // penalty for distance mismatch
+
+      // Surface fit
+      if (profile.bestSurface === surface || profile.bestSurface === "Both") {
+        power += 5;
+      } else {
+        power -= 5;
+      }
+
+      // Recent form bonus
+      const recentWins = profile.recentForm.slice(0, 3).filter((f) => f.finish <= 2).length;
+      power += recentWins * 4;
+
+      // Avg finish position (lower is better)
+      power -= profile.avgFinish * 2;
+    }
+
+    // Running style interaction with pace scenario
+    const numFrontRunners = horses.filter((hh) => hh.runningStyle === "Front Runner").length;
+    if (h.runningStyle === "Closer" && numFrontRunners >= 3) power += 5; // hot pace helps closers
+    if (h.runningStyle === "Front Runner" && numFrontRunners === 1) power += 4; // lone speed advantage
+    if (h.runningStyle === "Front Runner" && numFrontRunners >= 3) power -= 3; // too much speed
+
+    // Small random perturbation from the seeded random (so odds aren't identical across epochs)
+    power += (rand() - 0.5) * 6;
+
+    return { name: h.name, power: Math.max(1, power) };
   });
 
-  const odds: Record<string, { win: number; place: number; show: number }> = {};
-  for (const h of simResults.horses) {
-    const winOdds = h.winPct > 0 ? Math.min(99, Math.max(1.2, (100 / h.winPct) * 0.85)) : 99;
-    const placeOdds = h.placePct > 0 ? Math.min(50, Math.max(1.1, (100 / h.placePct) * 0.85)) : 50;
-    const showOdds = h.showPct > 0 ? Math.min(30, Math.max(1.05, (100 / h.showPct) * 0.85)) : 30;
+  // Step 2: Convert power ratings to win probabilities using softmax
+  const maxPower = Math.max(...ratings.map((r) => r.power));
+  const expRatings = ratings.map((r) => ({
+    name: r.name,
+    exp: Math.exp((r.power - maxPower) / 4), // temperature=4 for spread
+  }));
+  const totalExp = expRatings.reduce((s, r) => s + r.exp, 0);
+
+  const winProbs = new Map<string, number>();
+  for (const r of expRatings) {
+    winProbs.set(r.name, r.exp / totalExp);
+  }
+
+  // Step 3: Convert probabilities to odds
+  for (const h of horses) {
+    const winProb = winProbs.get(h.name) ?? 0.05;
+    // Ensure minimum probability so no horse is truly 0%
+    const adjWinProb = Math.max(0.02, Math.min(0.6, winProb));
+    const placeProb = Math.min(0.85, adjWinProb * 2.2 + 0.05);
+    const showProb = Math.min(0.92, adjWinProb * 3.0 + 0.1);
+
+    // Convert to decimal odds with 15% track take (vigorish)
+    const winOdds = Math.max(1.2, Math.min(30, (1 / adjWinProb) * 0.85));
+    const placeOdds = Math.max(1.1, Math.min(12, (1 / placeProb) * 0.85));
+    const showOdds = Math.max(1.05, Math.min(5, (1 / showProb) * 0.85));
+
     odds[h.name] = {
       win: Math.round(winOdds * 10) / 10,
       place: Math.round(placeOdds * 10) / 10,
@@ -350,12 +411,18 @@ function formatMoney(amount: number): string {
 }
 
 function formatOddsDisplay(odds: number): string {
-  if (!isFinite(odds) || odds <= 0) return "99-1";
-  if (odds >= 100) return "99-1";
+  if (!isFinite(odds) || odds <= 0) return "30-1";
+  if (odds >= 30) return "30-1";
   if (odds >= 10) return `${Math.round(odds)}-1`;
-  if (odds >= 2) return `${odds.toFixed(1)}-1`;
-  if (odds >= 1.1) return `${(odds - 1).toFixed(1)}-1`;
-  return "1-5";
+  // Traditional track fractions
+  if (odds >= 5) return `${Math.round(odds)}-1`;
+  if (odds >= 3) return `${Math.round(odds * 2) / 2}-1`;
+  if (odds >= 2) return `${(odds).toFixed(1)}-1`;
+  if (odds >= 1.5) return "5-2";
+  if (odds >= 1.4) return "2-1";
+  if (odds >= 1.3) return "3-2";
+  if (odds >= 1.2) return "6-5";
+  return "Even";
 }
 
 /** Get horse profile slug for linking */
@@ -1759,7 +1826,8 @@ export default function LiveRacingPage() {
     if (user && bets.length > 0) {
       const netProfit = winnings - wagered;
       const newBankroll = Math.max(0, user.bankroll + netProfit);
-      const newBiggestWin = Math.max(user.biggestWin, ...results.filter(r => r.won).map(r => r.payout - r.bet.totalCost));
+      const wonBets = results.filter(r => r.won).map(r => r.payout - r.bet.totalCost);
+      const newBiggestWin = wonBets.length > 0 ? Math.max(user.biggestWin, ...wonBets) : user.biggestWin;
 
       const updatedUser: UserProfile = {
         ...user,
@@ -1954,7 +2022,7 @@ export default function LiveRacingPage() {
               <div className="text-right mr-2">
                 <div className="text-[10px] uppercase font-semibold" style={{ color: TEXT_MUTED }}>Balance</div>
                 <div className="text-lg font-bold font-mono" style={{ color: GOLD }}>
-                  <AnimatedBalance value={user.bankroll} />
+                  <AnimatedBalance value={user.bankroll - (phase !== "results" ? bets.reduce((s, b) => s + b.totalCost, 0) : 0)} />
                 </div>
               </div>
             )}
