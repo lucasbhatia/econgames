@@ -28,6 +28,8 @@ import {
   CircleDot,
   Hash,
 } from "lucide-react";
+import Link from "next/link";
+import Image from "next/image";
 import { ALL_PROFILES } from "@/lib/data/horse-profiles";
 import type { HorseProfile } from "@/lib/data/horse-profiles";
 import { runMonteCarlo, simToReplayData } from "@/lib/simulation/engine";
@@ -77,7 +79,7 @@ const TRACK_CONFIGS = [
 const RACE_NAMES = [
   "The Sprint Classic", "The Maiden Dash", "The Turf Mile",
   "The Champagne Stakes", "The Gold Cup", "The Derby Trial",
-  "The Breeders\u2019 Challenge", "The Lightning Stakes",
+  "The Breeders' Challenge", "The Lightning Stakes",
   "The Crown Jewel", "The Midnight Run", "The Iron Horse",
   "The Victory Lap", "The Thunder Cup", "The Diamond Stakes",
   "The Eclipse Run", "The Phoenix Stakes",
@@ -272,9 +274,9 @@ function generateSeededRace(epoch: number): RaceCard {
 
   const odds: Record<string, { win: number; place: number; show: number }> = {};
   for (const h of simResults.horses) {
-    const winOdds = Math.max(1.2, (100 / h.winPct) * 0.85);
-    const placeOdds = Math.max(1.1, (100 / h.placePct) * 0.85);
-    const showOdds = Math.max(1.05, (100 / h.showPct) * 0.85);
+    const winOdds = h.winPct > 0 ? Math.min(99, Math.max(1.2, (100 / h.winPct) * 0.85)) : 99;
+    const placeOdds = h.placePct > 0 ? Math.min(50, Math.max(1.1, (100 / h.placePct) * 0.85)) : 50;
+    const showOdds = h.showPct > 0 ? Math.min(30, Math.max(1.05, (100 / h.showPct) * 0.85)) : 30;
     odds[h.name] = {
       win: Math.round(winOdds * 10) / 10,
       place: Math.round(placeOdds * 10) / 10,
@@ -324,9 +326,23 @@ function formatMoney(amount: number): string {
 }
 
 function formatOddsDisplay(odds: number): string {
+  if (!isFinite(odds) || odds <= 0) return "99-1";
+  if (odds >= 100) return "99-1";
   if (odds >= 10) return `${Math.round(odds)}-1`;
   if (odds >= 2) return `${odds.toFixed(1)}-1`;
-  return `${(odds - 1).toFixed(1)}-1`;
+  if (odds >= 1.1) return `${(odds - 1).toFixed(1)}-1`;
+  return "1-5";
+}
+
+/** Get horse profile slug for linking */
+function getHorseSlug(name: string): string {
+  return name.toLowerCase().replace(/\s+/g, "-");
+}
+
+/** Find profile by horse name to get imageUrl */
+function getHorseImage(name: string): string | null {
+  const profile = ALL_PROFILES.find((p) => p.name === name);
+  return profile?.imageUrl ?? null;
 }
 
 function formatTimer(seconds: number): string {
@@ -780,7 +796,7 @@ function BetSlipBuilder({
                   <div>{BET_TYPE_CONFIG[t].label}</div>
                   <div className="text-[9px] opacity-70 font-normal mt-0.5">
                     {BET_TYPE_CONFIG[t].picks} picks
-                    {t.includes("box") ? ` \u00d7 ${boxCombinations(BET_TYPE_CONFIG[t].picks)} combos` : ""}
+                    {t.includes("box") ? ` × ${boxCombinations(BET_TYPE_CONFIG[t].picks)} combos` : ""}
                   </div>
                 </button>
               ))}
@@ -793,43 +809,49 @@ function BetSlipBuilder({
       <div className="px-3 py-2 rounded-lg text-[11px]" style={{ background: `${GOLD}06`, border: `1px solid ${GOLD}20`, color: TEXT_SEC }}>
         <span className="font-semibold" style={{ color: GOLD }}>{config.label}:</span> {config.description}
         {combos > 1 && (
-          <span className="ml-1 font-mono" style={{ color: PURPLE }}>({combos} combos = ${amount} \u00d7 {combos} = ${totalCost})</span>
+          <span className="ml-1 font-mono" style={{ color: PURPLE }}>({combos} combos = ${amount} {"×"} {combos} = ${totalCost})</span>
         )}
       </div>
 
       {/* Horse Selection */}
-      <div className="space-y-1 max-h-[260px] overflow-y-auto pr-1">
+      <div className="space-y-1 max-h-[280px] overflow-y-auto pr-1">
         {race.horses.map((horse, i) => {
           const isSelected = selectedHorses.includes(horse.name);
           const orderIdx = selectedHorses.indexOf(horse.name);
           const odds = race.odds[horse.name];
+          const imgUrl = getHorseImage(horse.name);
 
           return (
             <button
               key={horse.name}
               onClick={() => handleHorseSelect(horse.name)}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all text-left"
+              className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-all text-left group"
               style={{
-                background: isSelected ? `${GOLD}10` : BG_WHITE,
+                background: isSelected ? `${GOLD}08` : BG_WHITE,
                 border: `1.5px solid ${isSelected ? GOLD : BORDER}`,
               }}
             >
-              {/* Post position */}
-              <div
-                className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0"
-                style={{ background: horse.color }}
-              >
-                {config.picks > 1 && isSelected ? (
-                  isKey && orderIdx === 0 ? "K" :
-                  orderIdx + 1
-                ) : i + 1}
+              {/* Horse image or post position */}
+              <div className="relative w-9 h-9 rounded-full overflow-hidden shrink-0" style={{ border: `2px solid ${isSelected ? GOLD : horse.color}` }}>
+                {imgUrl ? (
+                  <Image src={imgUrl} alt={horse.name} width={36} height={36} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs font-bold text-white" style={{ background: horse.color }}>
+                    {i + 1}
+                  </div>
+                )}
+                {config.picks > 1 && isSelected && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white text-[10px] font-bold">
+                    {isKey && orderIdx === 0 ? "K" : orderIdx + 1}
+                  </div>
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-semibold truncate" style={{ color: TEXT }}>
-                  {horse.name}
+                  #{i + 1} {horse.name}
                 </div>
                 <div className="flex items-center gap-1.5 text-[10px]" style={{ color: TEXT_MUTED }}>
-                  <span className="px-1 py-0.5 rounded" style={{ background: `${GOLD}08` }}>
+                  <span className="px-1.5 py-0.5 rounded" style={{ background: `${horse.color}12`, color: horse.color, fontWeight: 600 }}>
                     {horse.runningStyle}
                   </span>
                   <span>{horse.topSpeed.toFixed(1)} ft/s</span>
@@ -864,7 +886,7 @@ function BetSlipBuilder({
               className="flex-1 text-center py-1.5 rounded-md font-mono font-bold text-sm"
               style={{ background: BG_CARD, border: `1px solid ${BORDER}`, color: TEXT }}
             >
-              ${amount} {combos > 1 && <span className="text-[10px] font-normal" style={{ color: TEXT_MUTED }}>\u00d7{combos}</span>}
+              ${amount} {combos > 1 && <span className="text-[10px] font-normal" style={{ color: TEXT_MUTED }}>{"×"}{combos}</span>}
             </div>
             <button
               onClick={() => setAmount(Math.min(Math.floor(remaining / combos), amount + 5))}
@@ -918,7 +940,7 @@ function BetSlipBuilder({
 
         <div className="text-[11px] text-center" style={{ color: TEXT_MUTED }}>
           Available: <span className="font-mono font-semibold" style={{ color: remaining < 50 ? RED : TEXT }}>${remaining.toLocaleString()}</span>
-          {bets.length > 0 && ` \u00b7 ${bets.length} bet${bets.length > 1 ? "s" : ""} on slip`}
+          {bets.length > 0 && ` · ${bets.length} bet${bets.length > 1 ? "s" : ""} on slip`}
         </div>
       </div>
 
@@ -948,7 +970,7 @@ function BetSlipBuilder({
                 {BET_TYPE_CONFIG[bet.type].label}
               </span>
               <span className="flex-1 text-[11px] font-medium truncate" style={{ color: TEXT }}>
-                {bet.horseNames.join(" \u2192 ")}
+                {bet.horseNames.join(" → ")}
               </span>
               <span className="text-[11px] font-mono font-bold shrink-0" style={{ color: TEXT }}>
                 ${bet.totalCost}
@@ -993,7 +1015,7 @@ function PostParadeOverlay({ race, timer }: { race: RaceCard; timer: number }) {
             {race.name}
           </h2>
           <div className="text-sm text-white/60">
-            {race.track.name} \u00b7 {race.distance}F {race.surface} \u00b7 {race.condition}
+            {race.track.name} {"·"} {race.distance}F {race.surface} {"·"} {race.condition}
           </div>
         </motion.div>
 
@@ -1257,7 +1279,7 @@ function ResultsPanel({
                   {BET_TYPE_CONFIG[br.bet.type].label}
                 </span>
                 <span className="flex-1 text-[11px] font-medium truncate" style={{ color: TEXT }}>
-                  {br.bet.horseNames.join(" \u2192 ")}
+                  {br.bet.horseNames.join(" → ")}
                 </span>
                 <span className="font-mono font-bold text-sm shrink-0" style={{ color: br.won ? GREEN : RED }}>
                   {br.won ? `+$${(br.payout - br.bet.totalCost).toLocaleString()}` : `-$${br.bet.totalCost}`}
@@ -1720,7 +1742,7 @@ export default function LiveRacingPage() {
   /* ---- Phase labels ---- */
   const phaseLabel = phase === "betting" ? "Place Your Bets"
     : phase === "post_parade" ? "Loading Gates"
-    : phase === "racing" ? "They\u2019re Off!"
+    : phase === "racing" ? "They're Off!"
     : "Results";
 
   const phaseBadgeColor = phase === "betting" ? GOLD : phase === "post_parade" ? ORANGE : phase === "racing" ? GREEN : BLUE;
@@ -1786,11 +1808,11 @@ export default function LiveRacingPage() {
                   </h2>
                   <div className="flex items-center gap-2 text-xs mt-0.5" style={{ color: TEXT_SEC }}>
                     <span>{race.track.name}</span>
-                    <span>\u00b7</span>
+                    <span>{"·"}</span>
                     <span>{race.distance}F {race.surface}</span>
-                    <span>\u00b7</span>
+                    <span>{"·"}</span>
                     <span>{race.condition}</span>
-                    <span>\u00b7</span>
+                    <span>{"·"}</span>
                     <span>${(race.purse / 1000).toFixed(0)}K Purse</span>
                   </div>
                 </>
@@ -1852,7 +1874,7 @@ export default function LiveRacingPage() {
                         <div key={bet.id} className="flex items-center justify-between px-3 py-1.5 rounded-lg text-xs"
                           style={{ background: BG_WHITE, border: `1px solid ${BORDER}` }}>
                           <span className="font-semibold" style={{ color: GOLD }}>{BET_TYPE_CONFIG[bet.type].label}</span>
-                          <span style={{ color: TEXT }}>{bet.horseNames.join(" \u2192 ")}</span>
+                          <span style={{ color: TEXT }}>{bet.horseNames.join(" → ")}</span>
                           <span className="font-mono font-bold" style={{ color: TEXT }}>${bet.totalCost}</span>
                         </div>
                       ))}
@@ -1877,7 +1899,7 @@ export default function LiveRacingPage() {
                         <div key={bet.id} className="flex items-center justify-between px-3 py-1.5 rounded-lg text-xs"
                           style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
                           <span className="font-semibold" style={{ color: GOLD }}>{BET_TYPE_CONFIG[bet.type].label}</span>
-                          <span className="text-white/70 truncate px-2">{bet.horseNames.join(" \u2192 ")}</span>
+                          <span className="text-white/70 truncate px-2">{bet.horseNames.join(" → ")}</span>
                           <span className="font-mono font-bold text-white">${bet.totalCost}</span>
                         </div>
                       ))}
@@ -1941,35 +1963,44 @@ export default function LiveRacingPage() {
                     {race.horses.map((horse, i) => {
                       const odds = race.odds[horse.name];
                       const profile = ALL_PROFILES.find(p => p.name === horse.name);
+                      const imgUrl = getHorseImage(horse.name);
+                      const slug = getHorseSlug(horse.name);
                       return (
                         <div
                           key={horse.name}
-                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all"
+                          className="flex items-center gap-3 px-3 py-3 rounded-xl transition-all hover:shadow-sm"
                           style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}
                         >
-                          <div
-                            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-                            style={{ background: horse.color }}
-                          >
-                            {i + 1}
+                          {/* Horse image */}
+                          <div className="relative w-10 h-10 rounded-full overflow-hidden shrink-0" style={{ border: `2px solid ${horse.color}` }}>
+                            {imgUrl ? (
+                              <Image src={imgUrl} alt={horse.name} width={40} height={40} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-xs font-bold text-white" style={{ background: horse.color }}>
+                                {i + 1}
+                              </div>
+                            )}
+                            <div className="absolute -bottom-0.5 -right-0.5 w-4.5 h-4.5 rounded-full flex items-center justify-center text-[8px] font-bold text-white" style={{ background: horse.color, width: 16, height: 16, fontSize: 9 }}>
+                              {i + 1}
+                            </div>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm font-bold truncate" style={{ color: TEXT }}>
+                            <Link href={`/profiles/${slug}`} className="text-sm font-bold truncate block hover:underline" style={{ color: TEXT }}>
                               {horse.name}
-                            </div>
-                            <div className="flex items-center gap-2 text-[10px]" style={{ color: TEXT_MUTED }}>
-                              <span className="px-1.5 py-0.5 rounded" style={{ background: `${GOLD}08` }}>
+                            </Link>
+                            <div className="flex items-center gap-2 text-[10px] mt-0.5" style={{ color: TEXT_MUTED }}>
+                              <span className="px-1.5 py-0.5 rounded" style={{ background: `${horse.color}12`, color: horse.color, fontWeight: 600 }}>
                                 {horse.runningStyle}
                               </span>
-                              <span>Top: {horse.topSpeed.toFixed(1)} ft/s</span>
-                              {profile && <span>Avg: {profile.avgFinish.toFixed(1)}</span>}
+                              <span>{horse.topSpeed.toFixed(1)} ft/s</span>
+                              {profile && <span>Avg finish: {profile.avgFinish.toFixed(1)}</span>}
                             </div>
                           </div>
                           <div className="text-right shrink-0">
-                            <div className="text-sm font-bold font-mono" style={{ color: GOLD }}>
+                            <div className="text-base font-bold font-mono" style={{ color: GOLD }}>
                               {formatOddsDisplay(odds?.win ?? 2)}
                             </div>
-                            <div className="text-[10px]" style={{ color: TEXT_MUTED }}>
+                            <div className="text-[9px] uppercase font-semibold" style={{ color: TEXT_MUTED }}>
                               ML
                             </div>
                           </div>
