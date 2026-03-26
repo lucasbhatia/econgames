@@ -34,7 +34,7 @@ import { ALL_PROFILES } from "@/lib/data/horse-profiles";
 import type { HorseProfile } from "@/lib/data/horse-profiles";
 import { runMonteCarlo, simToReplayData } from "@/lib/simulation/engine";
 import type { SimHorse, SimResults, Surface, TrackBias } from "@/lib/simulation/types";
-import RaceReplay from "@/components/arena/RaceReplay";
+import LiveRaceView from "@/components/arena/LiveRaceView";
 import { useLeaderboard } from "@/lib/supabase/useLeaderboard";
 import type { LeaderboardEntry, SchoolStanding } from "@/lib/supabase/useLeaderboard";
 
@@ -2068,90 +2068,115 @@ export default function LiveRacingPage() {
                   <PostParadeOverlay race={race} timer={timer} />
                 )}
 
-                {/* Race replay during racing + results */}
+                {/* Live race view during racing + results */}
                 {(phase === "racing" || phase === "results") && replayData && (
-                  <RaceReplay
+                  <LiveRaceView
                     horses={replayData.horses}
                     colors={replayData.colors}
                     distance={race.distance}
+                    progress={phase === "results" ? 1 : Math.min(1, (RACING_DURATION - timer) / RACING_DURATION)}
+                    isRacing={phase === "racing"}
+                    isFinished={phase === "results"}
                   />
                 )}
 
-                {/* Race card during betting */}
+                {/* Odds board during betting */}
                 {phase === "betting" && (
-                  <div className="p-5 space-y-2.5" style={{ background: BG_WHITE }}>
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: TEXT_SEC }}>
-                        Post Positions
+                  <div className="p-4" style={{ background: BG_DARK, borderRadius: 16 }}>
+                    {/* Header */}
+                    <div className="flex items-center justify-between mb-3 px-1">
+                      <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: GOLD }}>
+                        Odds Board
                       </h3>
-                      <span className="text-[10px] font-mono" style={{ color: TEXT_MUTED }}>
-                        {race.horses.length} runners
+                      <span className="text-[10px] font-mono" style={{ color: "#ffffff50" }}>
+                        {race.horses.length} runners · {race.distance}F {race.surface}
                       </span>
                     </div>
 
-                    {race.horses.map((horse, i) => {
-                      const odds = race.odds[horse.name];
-                      const profile = ALL_PROFILES.find(p => p.name === horse.name);
-                      const imgUrl = getHorseImage(horse.name);
-                      const slug = getHorseSlug(horse.name);
-                      return (
-                        <div
-                          key={horse.name}
-                          className="flex items-center gap-3 px-3 py-3 rounded-xl transition-all hover:shadow-sm"
-                          style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}
-                        >
-                          {/* Horse image */}
-                          <div className="relative w-10 h-10 rounded-full overflow-hidden shrink-0" style={{ border: `2px solid ${horse.color}` }}>
-                            {imgUrl ? (
-                              <Image src={imgUrl} alt={horse.name} width={40} height={40} className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-xs font-bold text-white" style={{ background: horse.color }}>
-                                {i + 1}
+                    {/* Column headers */}
+                    <div className="flex items-center gap-2 px-2 pb-1.5 mb-1" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+                      <span className="w-5 text-[8px] font-bold text-center" style={{ color: "#ffffff40" }}>#</span>
+                      <span className="flex-1 text-[8px] font-bold uppercase" style={{ color: "#ffffff40" }}>Horse</span>
+                      <span className="w-12 text-[8px] font-bold text-center uppercase" style={{ color: "#ffffff40" }}>Win</span>
+                      <span className="w-12 text-[8px] font-bold text-center uppercase" style={{ color: "#ffffff40" }}>Place</span>
+                      <span className="w-12 text-[8px] font-bold text-center uppercase" style={{ color: "#ffffff40" }}>Show</span>
+                    </div>
+
+                    {/* Horse rows */}
+                    <div className="space-y-0.5">
+                      {race.horses.map((horse, i) => {
+                        const odds = race.odds[horse.name];
+                        const imgUrl = getHorseImage(horse.name);
+                        const slug = getHorseSlug(horse.name);
+                        return (
+                          <div
+                            key={horse.name}
+                            className="flex items-center gap-2 px-2 py-2 rounded-lg transition-all hover:bg-white/5"
+                          >
+                            {/* Post number + image */}
+                            <div className="w-5 shrink-0">
+                              <div className="w-5 h-5 rounded-full overflow-hidden" style={{ border: `1.5px solid ${horse.color}` }}>
+                                {imgUrl ? (
+                                  <Image src={imgUrl} alt={horse.name} width={20} height={20} className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-[8px] font-bold text-white" style={{ background: horse.color }}>
+                                    {i + 1}
+                                  </div>
+                                )}
                               </div>
-                            )}
-                            <div className="absolute -bottom-0.5 -right-0.5 w-4.5 h-4.5 rounded-full flex items-center justify-center text-[8px] font-bold text-white" style={{ background: horse.color, width: 16, height: 16, fontSize: 9 }}>
-                              {i + 1}
                             </div>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <Link href={`/profiles/${slug}`} className="text-sm font-bold truncate block hover:underline" style={{ color: TEXT }}>
-                              {horse.name}
-                            </Link>
-                            <div className="flex items-center gap-2 text-[10px] mt-0.5" style={{ color: TEXT_MUTED }}>
-                              <span className="px-1.5 py-0.5 rounded" style={{ background: `${horse.color}12`, color: horse.color, fontWeight: 600 }}>
+
+                            {/* Name + style */}
+                            <div className="flex-1 min-w-0">
+                              <Link href={`/profiles/${slug}`} className="text-[11px] font-bold truncate block hover:underline" style={{ color: "#fff" }}>
+                                {horse.name}
+                              </Link>
+                              <div className="text-[9px]" style={{ color: horse.color }}>
                                 {horse.runningStyle}
-                              </span>
-                              <span>{horse.topSpeed.toFixed(1)} ft/s</span>
-                              {profile && <span>Avg finish: {profile.avgFinish.toFixed(1)}</span>}
+                              </div>
+                            </div>
+
+                            {/* Win / Place / Show odds */}
+                            <div className="w-12 text-center">
+                              <div className="text-[11px] font-bold font-mono" style={{ color: GOLD }}>
+                                {formatOddsDisplay(odds?.win ?? 2)}
+                              </div>
+                              <div className="text-[8px] font-mono" style={{ color: "#ffffff30" }}>
+                                ${Math.round(10 * (odds?.win ?? 2))}
+                              </div>
+                            </div>
+                            <div className="w-12 text-center">
+                              <div className="text-[11px] font-bold font-mono" style={{ color: "#94a3b8" }}>
+                                {formatOddsDisplay(odds?.place ?? 1.5)}
+                              </div>
+                              <div className="text-[8px] font-mono" style={{ color: "#ffffff30" }}>
+                                ${Math.round(10 * (odds?.place ?? 1.5))}
+                              </div>
+                            </div>
+                            <div className="w-12 text-center">
+                              <div className="text-[11px] font-bold font-mono" style={{ color: "#94a3b8" }}>
+                                {formatOddsDisplay(odds?.show ?? 1.2)}
+                              </div>
+                              <div className="text-[8px] font-mono" style={{ color: "#ffffff30" }}>
+                                ${Math.round(10 * (odds?.show ?? 1.2))}
+                              </div>
                             </div>
                           </div>
-                          <div className="text-right shrink-0">
-                            <div className="text-base font-bold font-mono" style={{ color: GOLD }}>
-                              {formatOddsDisplay(odds?.win ?? 2)}
-                            </div>
-                            <div className="text-[9px] uppercase font-semibold" style={{ color: TEXT_MUTED }}>
-                              ML
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
 
                     {/* Pace projection */}
-                    <div className="mt-3 p-3 rounded-xl" style={{ background: `${GOLD}06`, border: `1px solid ${GOLD}20` }}>
-                      <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: GOLD }}>
-                        <TrendingUp className="w-3.5 h-3.5" />
-                        Pace Projection
-                      </div>
-                      <div className="text-[11px] mt-1" style={{ color: TEXT_SEC }}>
+                    <div className="mt-3 p-2.5 rounded-lg" style={{ background: "rgba(184,148,31,0.08)", border: "1px solid rgba(184,148,31,0.15)" }}>
+                      <div className="text-[10px]" style={{ color: "#ffffff70" }}>
                         {(() => {
                           const fr = race.horses.filter((h) => h.runningStyle === "Front Runner").length;
                           const cl = race.horses.filter((h) => h.runningStyle === "Closer").length;
                           const st = race.horses.filter((h) => h.runningStyle === "Stalker").length;
-                          if (fr >= 3) return `Hot pace \u2014 ${fr} front runners will battle for the lead. Closers have the edge.`;
-                          if (fr === 0) return `Slow pace likely \u2014 no true front runner. Tactical speed wins.`;
-                          if (fr === 1 && cl >= 3) return `Lone speed \u2014 1 front runner can dictate pace. ${cl} closers need a fast pace to rally.`;
-                          return `Honest pace \u2014 ${fr} speed, ${st} stalkers, ${cl} closers. Balanced race.`;
+                          if (fr >= 3) return `Hot pace \u2014 ${fr} front runners will battle. Edge: closers.`;
+                          if (fr === 0) return "Slow pace likely \u2014 no front runner. Tactical speed wins.";
+                          if (fr === 1 && cl >= 3) return `Lone speed \u2014 1 front runner dictates. ${cl} closers need fast pace.`;
+                          return `Honest pace \u2014 ${fr} speed, ${st} stalkers, ${cl} closers.`;
                         })()}
                       </div>
                     </div>
