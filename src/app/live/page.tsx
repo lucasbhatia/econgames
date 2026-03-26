@@ -36,7 +36,7 @@ import { runMonteCarlo, simToReplayData } from "@/lib/simulation/engine";
 import type { SimHorse, SimResults, Surface, TrackBias } from "@/lib/simulation/types";
 import RaceReplay from "@/components/arena/RaceReplay";
 import { useLeaderboard } from "@/lib/supabase/useLeaderboard";
-import type { LeaderboardEntry } from "@/lib/supabase/useLeaderboard";
+import type { LeaderboardEntry, SchoolStanding } from "@/lib/supabase/useLeaderboard";
 
 /* ================================================================== */
 /*  Constants                                                          */
@@ -88,11 +88,11 @@ const RACE_NAMES = [
 const CONDITIONS = ["Fast", "Good", "Yielding", "Firm"];
 
 // Phase durations in seconds
-const CYCLE_DURATION = 600; // 10 minutes total
-const BETTING_DURATION = 420; // 7 minutes to bet
-const POST_PARADE_DURATION = 30; // 30 second gate load
-const RACING_DURATION = 24; // 24 seconds for race
-const RESULTS_DURATION = CYCLE_DURATION - BETTING_DURATION - POST_PARADE_DURATION - RACING_DURATION; // ~2 min 6 sec
+const CYCLE_DURATION = 420; // 7 minutes total
+const BETTING_DURATION = 300; // 5 minutes to bet
+const POST_PARADE_DURATION = 20; // 20 second gate load
+const RACING_DURATION = 30; // 30 seconds for race (longer for drama)
+const RESULTS_DURATION = CYCLE_DURATION - BETTING_DURATION - POST_PARADE_DURATION - RACING_DURATION; // 70 sec
 
 type Phase = "betting" | "post_parade" | "racing" | "results";
 
@@ -128,9 +128,33 @@ interface Bet {
   combinations: number;
 }
 
+const SCHOOLS = [
+  "University of Kentucky",
+  "NYU",
+  "MIT",
+  "Stanford",
+  "Harvard",
+  "Wharton",
+  "University of Chicago",
+  "Columbia",
+  "Duke",
+  "Yale",
+  "Princeton",
+  "Georgetown",
+  "UCLA",
+  "UC Berkeley",
+  "Michigan",
+  "Virginia",
+  "Cornell",
+  "Northwestern",
+  "Notre Dame",
+  "Other",
+];
+
 interface UserProfile {
   id: string;
   name: string;
+  school: string;
   bankroll: number;
   startingBankroll: number;
   totalProfit: number;
@@ -373,10 +397,11 @@ function saveUser(user: UserProfile) {
   } catch {}
 }
 
-function createUser(name: string): UserProfile {
+function createUser(name: string, school: string): UserProfile {
   return {
     id: crypto.randomUUID(),
     name,
+    school,
     bankroll: 1000,
     startingBankroll: 1000,
     totalProfit: 0,
@@ -583,18 +608,20 @@ function TimerRing({ seconds, total, phase, label }: { seconds: number; total: n
 /*  Name Entry Modal                                                   */
 /* ================================================================== */
 
-function NameEntryModal({ onSubmit }: { onSubmit: (name: string) => void }) {
+function NameEntryModal({ onSubmit }: { onSubmit: (name: string, school: string) => void }) {
   const [name, setName] = useState("");
+  const [school, setSchool] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
+  const isValid = name.trim().length >= 2 && name.trim().length <= 20 && school !== "";
+
   const handleSubmit = () => {
-    const trimmed = name.trim();
-    if (trimmed.length >= 2 && trimmed.length <= 20) {
-      onSubmit(trimmed);
+    if (isValid) {
+      onSubmit(name.trim(), school);
     }
   };
 
@@ -623,33 +650,56 @@ function NameEntryModal({ onSubmit }: { onSubmit: (name: string) => void }) {
             Welcome to Race Night
           </h2>
           <p className="text-sm" style={{ color: TEXT_SEC }}>
-            Enter your name to start with $1,000 bankroll. Races cycle every 10 minutes.
+            $1,000 bankroll. New race every 7 minutes. Compete against other schools.
           </p>
         </div>
 
         <div className="space-y-3">
-          <input
-            ref={inputRef}
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-            placeholder="Your display name..."
-            maxLength={20}
-            className="w-full px-5 py-3.5 rounded-xl text-base font-medium outline-none transition-all"
-            style={{
-              background: BG_CARD,
-              border: `2px solid ${name.trim().length >= 2 ? GOLD : BORDER}`,
-              color: TEXT,
-            }}
-          />
+          <div>
+            <label className="text-xs font-semibold block mb-1.5" style={{ color: TEXT_SEC }}>Display Name</label>
+            <input
+              ref={inputRef}
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+              placeholder="Your name..."
+              maxLength={20}
+              className="w-full px-4 py-3 rounded-xl text-sm font-medium outline-none transition-all"
+              style={{
+                background: BG_CARD,
+                border: `2px solid ${name.trim().length >= 2 ? GOLD : BORDER}`,
+                color: TEXT,
+              }}
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold block mb-1.5" style={{ color: TEXT_SEC }}>School</label>
+            <select
+              value={school}
+              onChange={(e) => setSchool(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl text-sm font-medium outline-none transition-all appearance-none cursor-pointer"
+              style={{
+                background: BG_CARD,
+                border: `2px solid ${school ? GOLD : BORDER}`,
+                color: school ? TEXT : TEXT_MUTED,
+              }}
+            >
+              <option value="">Select your school...</option>
+              {SCHOOLS.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+
           <button
             onClick={handleSubmit}
-            disabled={name.trim().length < 2}
+            disabled={!isValid}
             className="w-full py-3.5 rounded-xl text-base font-bold text-white transition-all"
             style={{
-              background: name.trim().length >= 2 ? GOLD : BORDER,
-              opacity: name.trim().length >= 2 ? 1 : 0.5,
+              background: isValid ? GOLD : BORDER,
+              opacity: isValid ? 1 : 0.5,
             }}
           >
             Enter the Track
@@ -1338,7 +1388,7 @@ function UserStats({ user }: { user: UserProfile }) {
         <div className="flex-1">
           <div className="text-sm font-bold" style={{ color: TEXT }}>{user.name}</div>
           <div className="text-[11px]" style={{ color: TEXT_MUTED }}>
-            {user.racesPlayed} race{user.racesPlayed !== 1 ? "s" : ""} played
+            {user.school && <>{user.school} · </>}{user.racesPlayed} race{user.racesPlayed !== 1 ? "s" : ""}
           </div>
         </div>
       </div>
@@ -1396,15 +1446,19 @@ function UserStats({ user }: { user: UserProfile }) {
 
 function SharedLeaderboard({
   entries,
+  schoolStandings,
   currentUserId,
   connected,
   loading,
 }: {
   entries: LeaderboardEntry[];
+  schoolStandings: SchoolStanding[];
   currentUserId?: string;
   connected: boolean;
   loading: boolean;
 }) {
+  const [tab, setTab] = useState<"players" | "schools">("players");
+
   if (loading) {
     return (
       <div className="py-4 text-center">
@@ -1413,22 +1467,21 @@ function SharedLeaderboard({
     );
   }
 
-  if (entries.length === 0) {
+  if (entries.length === 0 && !connected) {
     return (
       <div className="py-4 text-center">
-        <p className="text-xs" style={{ color: TEXT_MUTED }}>
-          {connected ? "No players yet. Be the first!" : "Leaderboard offline"}
-        </p>
+        <p className="text-xs" style={{ color: TEXT_MUTED }}>Leaderboard offline</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center gap-2 mb-2">
+    <div className="space-y-2">
+      {/* Header */}
+      <div className="flex items-center gap-2">
         <TrendingUp className="w-3.5 h-3.5" style={{ color: GOLD }} />
         <span className="text-xs font-bold uppercase tracking-wider" style={{ color: TEXT_SEC }}>
-          Global Leaderboard
+          Leaderboard
         </span>
         {connected && (
           <span className="ml-auto flex items-center gap-1 text-[9px]" style={{ color: GREEN }}>
@@ -1436,49 +1489,121 @@ function SharedLeaderboard({
           </span>
         )}
       </div>
-      {entries.slice(0, 10).map((entry, i) => {
-        const isYou = entry.id === currentUserId;
-        const profit = entry.total_profit;
-        const Icon = i === 0 ? Crown : i === 1 ? Medal : i === 2 ? Trophy : Hash;
 
-        return (
-          <motion.div
-            key={entry.id}
-            layout
-            className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all"
+      {/* Tab switch */}
+      <div className="flex gap-1 p-0.5 rounded-lg" style={{ background: BG_CARD }}>
+        {(["players", "schools"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className="flex-1 py-1.5 rounded-md text-[11px] font-semibold capitalize transition-all"
             style={{
-              background: isYou ? `${GOLD}08` : BG_WHITE,
-              border: `1px solid ${isYou ? GOLD : BORDER}`,
+              background: tab === t ? BG_WHITE : "transparent",
+              color: tab === t ? TEXT : TEXT_MUTED,
+              boxShadow: tab === t ? "0 1px 3px rgba(0,0,0,0.06)" : "none",
             }}
           >
-            <div
-              className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
-              style={{
-                background: i === 0 ? `${GOLD}20` : i < 3 ? `${TEXT_MUTED}10` : "transparent",
-                color: i === 0 ? GOLD : TEXT_MUTED,
-              }}
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {/* Players tab */}
+      {tab === "players" && (
+        <div className="space-y-1">
+          {entries.length === 0 ? (
+            <p className="text-xs text-center py-3" style={{ color: TEXT_MUTED }}>No players yet. Be the first!</p>
+          ) : entries.slice(0, 10).map((entry, i) => {
+            const isYou = entry.id === currentUserId;
+            const profit = entry.total_profit;
+            const Icon = i === 0 ? Crown : i === 1 ? Medal : i === 2 ? Trophy : Hash;
+
+            return (
+              <motion.div
+                key={entry.id}
+                layout
+                className="flex items-center gap-2 px-2.5 py-2 rounded-lg transition-all"
+                style={{
+                  background: isYou ? `${GOLD}06` : BG_WHITE,
+                  border: `1px solid ${isYou ? GOLD : BORDER}`,
+                }}
+              >
+                <div
+                  className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
+                  style={{
+                    background: i === 0 ? `${GOLD}20` : i < 3 ? `${TEXT_MUTED}10` : "transparent",
+                    color: i === 0 ? GOLD : TEXT_MUTED,
+                  }}
+                >
+                  {i < 3 ? <Icon className="w-2.5 h-2.5" /> : <span className="text-[9px] font-mono">{i + 1}</span>}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[11px] font-bold truncate" style={{ color: TEXT }}>
+                    {entry.name} {isYou && <span className="text-[9px] font-normal" style={{ color: GOLD }}>(you)</span>}
+                  </div>
+                  <div className="text-[9px] truncate" style={{ color: TEXT_MUTED }}>
+                    {entry.school || "No school"} · {entry.races_played}R
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="text-[11px] font-bold font-mono" style={{ color: TEXT }}>
+                    ${Math.round(entry.bankroll).toLocaleString()}
+                  </div>
+                  <div className="text-[9px] font-mono" style={{ color: profit >= 0 ? GREEN : RED }}>
+                    {profit >= 0 ? "+" : ""}{Math.round(profit)}
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Schools tab */}
+      {tab === "schools" && (
+        <div className="space-y-1">
+          {schoolStandings.length === 0 ? (
+            <p className="text-xs text-center py-3" style={{ color: TEXT_MUTED }}>No school data yet</p>
+          ) : schoolStandings.slice(0, 10).map((school, i) => (
+            <motion.div
+              key={school.school}
+              layout
+              className="px-2.5 py-2.5 rounded-lg"
+              style={{ background: BG_WHITE, border: `1px solid ${BORDER}` }}
             >
-              {i < 3 ? <Icon className="w-3 h-3" /> : <span className="text-[10px] font-mono">{i + 1}</span>}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-xs font-bold truncate" style={{ color: TEXT }}>
-                {entry.name} {isYou && <span className="text-[9px] font-normal" style={{ color: GOLD }}>(you)</span>}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div
+                    className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[9px] font-bold"
+                    style={{
+                      background: i === 0 ? `${GOLD}20` : i < 3 ? `${TEXT_MUTED}10` : BG_CARD,
+                      color: i === 0 ? GOLD : TEXT_MUTED,
+                    }}
+                  >
+                    {i + 1}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[11px] font-bold truncate" style={{ color: TEXT }}>
+                      {school.school}
+                    </div>
+                    <div className="text-[9px]" style={{ color: TEXT_MUTED }}>
+                      {school.players} player{school.players !== 1 ? "s" : ""} · Top: {school.topPlayer}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right shrink-0 ml-2">
+                  <div className="text-[11px] font-bold font-mono" style={{ color: school.totalProfit >= 0 ? GREEN : RED }}>
+                    {school.totalProfit >= 0 ? "+" : ""}${Math.abs(school.totalProfit).toLocaleString()}
+                  </div>
+                  <div className="text-[9px] font-mono" style={{ color: TEXT_MUTED }}>
+                    avg ${school.avgBankroll.toLocaleString()}
+                  </div>
+                </div>
               </div>
-              <div className="text-[10px]" style={{ color: TEXT_MUTED }}>
-                {entry.races_played} race{entry.races_played !== 1 ? "s" : ""}
-              </div>
-            </div>
-            <div className="text-right shrink-0">
-              <div className="text-xs font-bold font-mono" style={{ color: TEXT }}>
-                ${Math.round(entry.bankroll).toLocaleString()}
-              </div>
-              <div className="text-[10px] font-mono" style={{ color: profit >= 0 ? GREEN : RED }}>
-                {profit >= 0 ? "+" : ""}{Math.round(profit)}
-              </div>
-            </div>
-          </motion.div>
-        );
-      })}
+            </motion.div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -1494,7 +1619,7 @@ export default function LiveRacingPage() {
   const [mounted, setMounted] = useState(false);
 
   /* ---- Supabase leaderboard ---- */
-  const { leaderboard, loading: lbLoading, connected: lbConnected, syncPlayer, logBets } = useLeaderboard();
+  const { leaderboard, schoolStandings, loading: lbLoading, connected: lbConnected, syncPlayer, logBets } = useLeaderboard();
 
   /* ---- Race state ---- */
   const [epoch, setEpoch] = useState(0);
@@ -1527,6 +1652,7 @@ export default function LiveRacingPage() {
       syncPlayer({
         id: saved.id,
         name: saved.name,
+        school: saved.school || "",
         bankroll: saved.bankroll,
         total_profit: saved.totalProfit,
         races_played: saved.racesPlayed,
@@ -1538,15 +1664,15 @@ export default function LiveRacingPage() {
   }, [syncPlayer]);
 
   /* ---- Create user ---- */
-  const handleCreateUser = useCallback((name: string) => {
-    const newUser = createUser(name);
+  const handleCreateUser = useCallback((name: string, school: string) => {
+    const newUser = createUser(name, school);
     setUser(newUser);
     saveUser(newUser);
     setShowNameEntry(false);
-    // Sync to Supabase
     syncPlayer({
       id: newUser.id,
       name: newUser.name,
+      school: newUser.school,
       bankroll: newUser.bankroll,
       total_profit: newUser.totalProfit,
       races_played: newUser.racesPlayed,
@@ -1650,6 +1776,7 @@ export default function LiveRacingPage() {
       syncPlayer({
         id: updatedUser.id,
         name: updatedUser.name,
+        school: updatedUser.school,
         bankroll: updatedUser.bankroll,
         total_profit: updatedUser.totalProfit,
         races_played: updatedUser.racesPlayed,
@@ -1690,6 +1817,7 @@ export default function LiveRacingPage() {
       syncPlayer({
         id: updatedUser.id,
         name: updatedUser.name,
+        school: updatedUser.school,
         bankroll: updatedUser.bankroll,
         total_profit: updatedUser.totalProfit,
         races_played: updatedUser.racesPlayed,
@@ -1732,6 +1860,7 @@ export default function LiveRacingPage() {
     syncPlayer({
       id: reset.id,
       name: reset.name,
+      school: reset.school,
       bankroll: reset.bankroll,
       total_profit: reset.totalProfit,
       races_played: reset.racesPlayed,
@@ -2111,6 +2240,7 @@ export default function LiveRacingPage() {
               <div className="p-4 rounded-2xl" style={{ background: BG_WHITE, border: `1.5px solid ${BORDER}` }}>
                 <SharedLeaderboard
                   entries={leaderboard}
+                  schoolStandings={schoolStandings}
                   currentUserId={user?.id}
                   connected={lbConnected}
                   loading={lbLoading}

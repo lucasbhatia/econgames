@@ -6,6 +6,7 @@ import { supabase } from "./client";
 export interface LeaderboardEntry {
   id: string;
   name: string;
+  school: string;
   bankroll: number;
   total_profit: number;
   races_played: number;
@@ -13,9 +14,18 @@ export interface LeaderboardEntry {
   last_active: string;
 }
 
+export interface SchoolStanding {
+  school: string;
+  players: number;
+  totalProfit: number;
+  avgBankroll: number;
+  topPlayer: string;
+}
+
 interface PlayerUpsert {
   id: string;
   name: string;
+  school: string;
   bankroll: number;
   total_profit: number;
   races_played: number;
@@ -42,8 +52,40 @@ function isConfigured(): boolean {
   );
 }
 
+/** Compute school standings from player data */
+function computeSchoolStandings(players: LeaderboardEntry[]): SchoolStanding[] {
+  const schoolMap = new Map<string, { players: LeaderboardEntry[] }>();
+
+  for (const p of players) {
+    if (!p.school) continue;
+    const existing = schoolMap.get(p.school);
+    if (existing) {
+      existing.players.push(p);
+    } else {
+      schoolMap.set(p.school, { players: [p] });
+    }
+  }
+
+  const standings: SchoolStanding[] = [];
+  for (const [school, data] of schoolMap) {
+    const totalProfit = data.players.reduce((s, p) => s + p.total_profit, 0);
+    const avgBankroll = data.players.reduce((s, p) => s + p.bankroll, 0) / data.players.length;
+    const topPlayer = data.players.sort((a, b) => b.bankroll - a.bankroll)[0];
+    standings.push({
+      school,
+      players: data.players.length,
+      totalProfit: Math.round(totalProfit),
+      avgBankroll: Math.round(avgBankroll),
+      topPlayer: topPlayer?.name ?? "",
+    });
+  }
+
+  return standings.sort((a, b) => b.totalProfit - a.totalProfit);
+}
+
 export function useLeaderboard() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [schoolStandings, setSchoolStandings] = useState<SchoolStanding[]>([]);
   const [loading, setLoading] = useState(true);
   const [connected, setConnected] = useState(false);
   const subscriptionRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -58,12 +100,14 @@ export function useLeaderboard() {
     try {
       const { data, error } = await supabase
         .from("players")
-        .select("id, name, bankroll, total_profit, races_played, biggest_win, last_active")
+        .select("id, name, school, bankroll, total_profit, races_played, biggest_win, last_active")
         .order("bankroll", { ascending: false })
-        .limit(50);
+        .limit(100);
 
       if (error) throw error;
-      setLeaderboard(data ?? []);
+      const entries = (data ?? []) as LeaderboardEntry[];
+      setLeaderboard(entries);
+      setSchoolStandings(computeSchoolStandings(entries));
       setConnected(true);
     } catch (err) {
       console.warn("Leaderboard fetch failed:", err);
@@ -89,7 +133,6 @@ export function useLeaderboard() {
         "postgres_changes",
         { event: "*", schema: "public", table: "players" },
         () => {
-          // Re-fetch on any change (simple approach)
           fetchLeaderboard();
         }
       )
@@ -115,6 +158,7 @@ export function useLeaderboard() {
         {
           id: player.id,
           name: player.name,
+          school: player.school,
           bankroll: player.bankroll,
           total_profit: player.total_profit,
           races_played: player.races_played,
@@ -141,6 +185,7 @@ export function useLeaderboard() {
 
   return {
     leaderboard,
+    schoolStandings,
     loading,
     connected,
     syncPlayer,
