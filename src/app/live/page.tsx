@@ -2277,28 +2277,25 @@ export default function LiveRacingPage() {
                 </div>
               )}
 
-              {/* RACING: live positions + bets — all light */}
+              {/* RACING: names sliding across like a mini race */}
               {phase === "racing" && (
                 <div className="p-4 rounded-2xl" style={{ background: BG_WHITE, border: `1.5px solid ${BORDER}` }}>
-                  {/* Live positions */}
-                  <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center gap-2 mb-2">
                     <motion.div animate={{ scale: [1, 1.15, 1] }} transition={{ repeat: Infinity, duration: 0.8 }}>
                       <Zap className="w-4 h-4" style={{ color: GOLD }} />
                     </motion.div>
-                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: TEXT }}>Live Positions</span>
+                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: TEXT }}>Live</span>
                     <span className="ml-auto text-[10px] font-mono font-bold" style={{ color: GOLD }}>
                       {replayData ? `${(Math.min(1, (RACING_DURATION - timer) / RACING_DURATION) * race.distance).toFixed(1)}f / ${race.distance}f` : ""}
                     </span>
                   </div>
 
-                  {/* Position bars */}
-                  <div className="space-y-1.5 mb-4">
+                  {/* Mini race — names slide left to right */}
+                  <div className="space-y-0.5">
                     {replayData && (() => {
                       const prog = Math.min(1, (RACING_DURATION - timer) / RACING_DURATION);
                       const nHorses = race.horses.length;
-                      // Use replay data positions for accurate ordering
                       const horsesWithPos = replayData.horses.map((h: { name: string; finish: number; gates: { g: number; p: number; spd: number }[] }, i: number) => {
-                        // Interpolate current position from gate data
                         const cur = prog * race.distance;
                         let pos = h.finish;
                         for (let gi = 0; gi < h.gates.length - 1; gi++) {
@@ -2315,28 +2312,27 @@ export default function LiveRacingPage() {
                       }).sort((a: { x: number }, b: { x: number }) => b.x - a.x);
 
                       return horsesWithPos.map((h, rank) => (
-                        <div key={h.name} className="flex items-center gap-2">
-                          <span className="text-[10px] font-bold w-4 text-right" style={{ color: rank < 3 ? GOLD : TEXT_MUTED }}>
-                            {rank + 1}
-                          </span>
-                          <div className="w-3.5 h-3.5 rounded-full shrink-0" style={{ background: h.color }} />
-                          <span className="text-[11px] font-medium w-28 truncate" style={{ color: TEXT }}>{h.name}</span>
-                          <div className="flex-1 h-2.5 rounded-full overflow-hidden" style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}>
-                            <motion.div
-                              className="h-full rounded-full"
-                              style={{
-                                background: rank === 0 ? GOLD : h.color,
-                                width: `${h.x * 100}%`,
-                                transition: "width 0.3s ease",
-                              }}
-                            />
+                        <div key={h.name} className="relative h-6 overflow-hidden rounded" style={{ background: rank % 2 === 0 ? BG_CARD : BG_WHITE }}>
+                          {/* Name slides across the row */}
+                          <div
+                            className="absolute top-0 h-full flex items-center gap-1.5 whitespace-nowrap"
+                            style={{
+                              left: `${h.x * 75}%`,
+                              transition: "left 0.3s ease",
+                            }}
+                          >
+                            <div className="w-2 h-2 rounded-full shrink-0" style={{ background: h.color }} />
+                            <span
+                              className="text-[10px] font-bold"
+                              style={{ color: rank === 0 ? GOLD : rank < 3 ? TEXT : TEXT_SEC }}
+                            >
+                              {h.name}
+                            </span>
                           </div>
                         </div>
                       ));
                     })()}
                   </div>
-
-                  {/* Bets shown in persistent card below */}
                 </div>
               )}
 
