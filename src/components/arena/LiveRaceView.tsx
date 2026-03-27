@@ -30,60 +30,19 @@ interface LiveRaceViewProps {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Theme                                                              */
+/*  Theme — broadcast tote board style                                 */
 /* ------------------------------------------------------------------ */
 
 const GOLD = "#b8941f";
-const BG = "#1a1a2a";
-const BG_CARD = "#22223a";
-const BORDER = "rgba(255,255,255,0.1)";
-const TEXT_DIM = "#9ca3af";
-
-/* ------------------------------------------------------------------ */
-/*  Track Geometry                                                     */
-/* ------------------------------------------------------------------ */
-
-const SVG_W = 720;
-const SVG_H = 440;
-const CX = SVG_W / 2;
-const CY = SVG_H / 2 + 10;
-
-// Outer rail ellipse
-const OUTER_RX = 310;
-const OUTER_RY = 175;
-
-// Inner rail ellipse
-const INNER_RX = 235;
-const INNER_RY = 110;
-
-// Track center (where horses run)
-const TRACK_RX = (OUTER_RX + INNER_RX) / 2;
-const TRACK_RY = (OUTER_RY + INNER_RY) / 2;
-
-// Lane spread
-const LANE_SPREAD = (OUTER_RX - INNER_RX) * 0.55;
-
-/** Get position on the track ellipse at normalized progress (0-1).
- *  Horses start at the top-right, run clockwise. */
-function getTrackPosition(
-  progress: number,
-  laneOffset: number // -0.5 to 0.5 (inner to outer)
-): { x: number; y: number; angle: number } {
-  // Start near the top (just past finish line), go clockwise
-  const angle = -Math.PI / 2 + progress * 2 * Math.PI;
-  const rx = TRACK_RX + laneOffset * LANE_SPREAD;
-  const ry = TRACK_RY + laneOffset * LANE_SPREAD * (TRACK_RY / TRACK_RX);
-  return {
-    x: CX + rx * Math.cos(angle),
-    y: CY + ry * Math.sin(angle),
-    angle: angle,
-  };
-}
-
-/** Create an SVG ellipse path string */
-function ellipsePath(cx: number, cy: number, rx: number, ry: number): string {
-  return `M ${cx - rx},${cy} A ${rx},${ry} 0 1,1 ${cx + rx},${cy} A ${rx},${ry} 0 1,1 ${cx - rx},${cy} Z`;
-}
+const BG = "#0f1923";
+const BG_LANE = "#162230";
+const BG_LANE_ALT = "#1a2940";
+const RAIL_COLOR = "#ffffff";
+const DIRT_COLOR = "#3d2e1f";
+const TEXT_WHITE = "#e8edf2";
+const TEXT_DIM = "#6b7d8d";
+const FINISH_RED = "#dc2626";
+const GREEN = "#16a34a";
 
 /* ------------------------------------------------------------------ */
 /*  Interpolation                                                      */
@@ -114,31 +73,11 @@ function lerpGate(
   };
 }
 
-/* ------------------------------------------------------------------ */
-/*  Checkered Flag Pattern                                             */
-/* ------------------------------------------------------------------ */
-
-function CheckeredFlag({ x, y }: { x: number; y: number }) {
-  const size = 3;
-  const cols = 4;
-  const rows = 6;
-  return (
-    <g transform={`translate(${x - (cols * size) / 2}, ${y - (rows * size) / 2})`}>
-      {Array.from({ length: rows }).map((_, r) =>
-        Array.from({ length: cols }).map((_, c) => (
-          <rect
-            key={`${r}-${c}`}
-            x={c * size}
-            y={r * size}
-            width={size}
-            height={size}
-            fill={(r + c) % 2 === 0 ? "#fff" : "#1a1a1a"}
-            opacity={0.9}
-          />
-        ))
-      )}
-    </g>
-  );
+function ordinal(n: number): string {
+  if (n === 1) return "1st";
+  if (n === 2) return "2nd";
+  if (n === 3) return "3rd";
+  return `${n}th`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -154,7 +93,7 @@ export default function LiveRaceView({
   isFinished,
 }: LiveRaceViewProps) {
   const n = horses.length;
-  const isGalloping = isRacing && progress > 0 && progress < 1;
+  const LANE_H = Math.max(28, Math.min(38, 320 / n));
 
   const horseStates = useMemo(() => {
     return horses.map((h, i) => {
@@ -162,16 +101,14 @@ export default function LiveRaceView({
       const finished = progress >= 1;
       const currentPosition = finished ? h.finish : interp.position;
       const positionOffset = (currentPosition - 1) * 0.035;
-      const horseProgress = Math.max(0, Math.min(1, progress - positionOffset));
-      const laneOffset = ((i / Math.max(1, n - 1)) - 0.5) * 0.8; // spread across lanes
+      const horseX = Math.max(0, Math.min(1, progress - positionOffset));
 
       return {
         ...h,
         color: colors[i % colors.length],
         currentPosition,
         currentSpeed: interp.speed,
-        horseProgress,
-        laneOffset,
+        horseX,
         lane: i,
       };
     });
@@ -180,74 +117,49 @@ export default function LiveRaceView({
   const sorted = [...horseStates].sort((a, b) => a.currentPosition - b.currentPosition);
   const leader = sorted[0];
 
-  // Finish line position
-  const finishPos = getTrackPosition(0, 0);
+  // Furlong markers
+  const furlongMarks = [];
+  for (let f = 1; f < distance; f++) {
+    furlongMarks.push({ furlong: f, pct: f / distance });
+  }
 
   return (
-    <div className="w-full select-none rounded-2xl overflow-hidden" style={{ background: BG }}>
-      {/* ─── Header Bar ─── */}
+    <div className="w-full select-none overflow-hidden" style={{ background: BG, borderRadius: 12 }}>
+      {/* ─── Header Bar — broadcast info strip ─── */}
       <div
-        className="flex items-center justify-between px-5 py-3"
-        style={{ borderBottom: `1px solid ${BORDER}` }}
+        className="flex items-center justify-between px-4 py-2"
+        style={{ background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}
       >
         <div className="flex items-center gap-3">
-          {/* LIVE badge */}
           {isRacing && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md"
-              style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)" }}>
-              <div className="w-2 h-2 rounded-full animate-pulse-live" style={{ background: "#ef4444" }} />
-              <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#ef4444" }}>
-                Live
-              </span>
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded"
+              style={{ background: "rgba(239,68,68,0.15)" }}>
+              <motion.div
+                animate={{ opacity: [1, 0.3, 1] }}
+                transition={{ repeat: Infinity, duration: 1 }}
+                className="w-1.5 h-1.5 rounded-full"
+                style={{ background: "#ef4444" }}
+              />
+              <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#ef4444" }}>Live</span>
             </div>
           )}
           {isFinished && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md"
-              style={{ background: `${GOLD}15`, border: `1px solid ${GOLD}40` }}>
-              <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: GOLD }}>
-                Official
-              </span>
+            <div className="px-2 py-0.5 rounded" style={{ background: `${GOLD}20` }}>
+              <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: GOLD }}>Official</span>
             </div>
           )}
-          {!isRacing && !isFinished && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md"
-              style={{ background: "rgba(139,148,158,0.1)", border: `1px solid ${BORDER}` }}>
-              <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: TEXT_DIM }}>
-                Waiting
-              </span>
-            </div>
-          )}
-
-          {/* Distance progress */}
-          <div className="flex items-center gap-2">
-            <div className="h-1.5 w-24 rounded-full overflow-hidden" style={{ background: BORDER }}>
-              <div
-                className="h-full rounded-full transition-all duration-300"
-                style={{
-                  width: `${progress * 100}%`,
-                  background: isFinished
-                    ? `linear-gradient(90deg, ${GOLD}, #f0d060)`
-                    : "linear-gradient(90deg, #ef4444, #f97316)",
-                }}
-              />
-            </div>
-            <span className="text-xs font-mono font-bold" style={{ color: GOLD }}>
-              {(progress * distance).toFixed(1)}f / {distance}f
-            </span>
-          </div>
+          <span className="text-xs font-mono font-bold" style={{ color: GOLD }}>
+            {(progress * distance).toFixed(1)}f / {distance}f
+          </span>
         </div>
 
-        {/* Leader callout */}
         {leader && (isRacing || isFinished) && (
           <div className="flex items-center gap-2">
-            <span className="text-[10px] uppercase tracking-wider" style={{ color: TEXT_DIM }}>
+            <span className="text-[10px] uppercase" style={{ color: TEXT_DIM }}>
               {isFinished ? "Winner" : "Leader"}
             </span>
-            <div className="w-3 h-3 rounded-full" style={{
-              background: leader.color,
-              boxShadow: `0 0 8px ${leader.color}80`,
-            }} />
-            <span className="text-xs font-bold text-white">{leader.name}</span>
+            <div className="w-2.5 h-2.5 rounded-sm" style={{ background: leader.color }} />
+            <span className="text-xs font-bold" style={{ color: TEXT_WHITE }}>{leader.name}</span>
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded"
               style={{ background: `${GOLD}15`, color: GOLD }}>
               {leader.currentSpeed} ft/s
@@ -256,336 +168,171 @@ export default function LiveRaceView({
         )}
       </div>
 
-      {/* ─── Track SVG ─── */}
-      <div className="relative" style={{ padding: "12px 8px 8px" }}>
-        <svg
-          viewBox={`0 0 ${SVG_W} ${SVG_H}`}
-          className="w-full"
-          style={{ maxHeight: 420 }}
-        >
-          <defs>
-            {/* Grass infield gradient */}
-            <radialGradient id="grassGrad" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#1a4d2e" />
-              <stop offset="60%" stopColor="#15402a" />
-              <stop offset="100%" stopColor="#0f3321" />
-            </radialGradient>
-
-            {/* Dirt track gradient */}
-            <radialGradient id="dirtGrad" cx="50%" cy="40%" r="60%">
-              <stop offset="0%" stopColor="#8b7355" />
-              <stop offset="50%" stopColor="#7a6548" />
-              <stop offset="100%" stopColor="#6d5a40" />
-            </radialGradient>
-
-            {/* Glow filter for horse dots */}
-            <filter id="horseGlow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="4" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-
-            {/* Trail glow filter */}
-            <filter id="trailGlow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="6" />
-            </filter>
-
-            {/* Finish line pattern */}
-            <pattern id="checkerPattern" width="6" height="6" patternUnits="userSpaceOnUse">
-              <rect width="3" height="3" fill="#fff" />
-              <rect x="3" y="3" width="3" height="3" fill="#fff" />
-              <rect x="3" width="3" height="3" fill="#111" />
-              <rect y="3" width="3" height="3" fill="#111" />
-            </pattern>
-          </defs>
-
-          {/* ── Background ── */}
-          <rect width={SVG_W} height={SVG_H} fill={BG} rx="12" />
-
-          {/* ── Outer track area (dirt) ── */}
-          <path d={ellipsePath(CX, CY, OUTER_RX, OUTER_RY)} fill="url(#dirtGrad)" />
-
-          {/* ── Outer rail (white) ── */}
-          <ellipse
-            cx={CX} cy={CY} rx={OUTER_RX} ry={OUTER_RY}
-            fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2.5"
-          />
-
-          {/* ── Inner rail (white) ── */}
-          <ellipse
-            cx={CX} cy={CY} rx={INNER_RX} ry={INNER_RY}
-            fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2"
-          />
-
-          {/* ── Grass infield ── */}
-          <path d={ellipsePath(CX, CY, INNER_RX - 3, INNER_RY - 3)} fill="url(#grassGrad)" />
-
-          {/* ── Infield grass detail lines ── */}
-          {[0.7, 0.5, 0.3].map((scale, i) => (
-            <ellipse
-              key={i}
-              cx={CX} cy={CY}
-              rx={INNER_RX * scale}
-              ry={INNER_RY * scale}
-              fill="none"
-              stroke="rgba(255,255,255,0.04)"
-              strokeWidth="1"
-              strokeDasharray="4 8"
-            />
-          ))}
-
-          {/* ── Furlong markers on track ── */}
-          {Array.from({ length: 8 }).map((_, i) => {
-            const frac = (i + 1) / 8;
-            const outerPt = getTrackPosition(frac, 0.5);
-            const innerPt = getTrackPosition(frac, -0.5);
-            return (
-              <g key={i}>
-                <line
-                  x1={innerPt.x} y1={innerPt.y}
-                  x2={outerPt.x} y2={outerPt.y}
-                  stroke="rgba(255,255,255,0.12)"
-                  strokeWidth="1"
-                />
-                <text
-                  x={(outerPt.x + innerPt.x) / 2}
-                  y={(outerPt.y + innerPt.y) / 2 - 6}
-                  fill="rgba(255,255,255,0.2)"
-                  fontSize="8"
-                  fontFamily="monospace"
-                  textAnchor="middle"
-                >
-                  {Math.round(frac * distance)}f
-                </text>
-              </g>
-            );
-          })}
-
-          {/* ── Finish line ── */}
-          {(() => {
-            const outerF = getTrackPosition(0, 0.55);
-            const innerF = getTrackPosition(0, -0.55);
-            const dx = outerF.x - innerF.x;
-            const dy = outerF.y - innerF.y;
-            const len = Math.sqrt(dx * dx + dy * dy);
-            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-            return (
-              <g>
-                <line
-                  x1={innerF.x} y1={innerF.y}
-                  x2={outerF.x} y2={outerF.y}
-                  stroke="url(#checkerPattern)"
-                  strokeWidth="8"
-                  opacity={0.85}
-                />
-                {/* Checkered flag icon */}
-                <CheckeredFlag x={finishPos.x} y={finishPos.y - 22} />
-                <text
-                  x={finishPos.x}
-                  y={finishPos.y - 34}
-                  fill={GOLD}
-                  fontSize="9"
-                  fontWeight="700"
-                  fontFamily="monospace"
-                  textAnchor="middle"
-                  letterSpacing="0.1em"
-                >
-                  FINISH
-                </text>
-              </g>
-            );
-          })()}
-
-          {/* ── Horse trails (glowing) ── */}
-          {(isRacing || isFinished) && horseStates.map((h) => {
-            if (h.horseProgress <= 0.01) return null;
-            // Draw a trail arc behind the horse
-            const trailPoints: string[] = [];
-            const trailLen = Math.min(h.horseProgress, 0.08);
-            const steps = 12;
-            for (let s = 0; s <= steps; s++) {
-              const t = h.horseProgress - trailLen + (trailLen * s) / steps;
-              if (t < 0) continue;
-              const pt = getTrackPosition(t, h.laneOffset);
-              trailPoints.push(`${pt.x},${pt.y}`);
-            }
-            if (trailPoints.length < 2) return null;
-            return (
-              <polyline
-                key={`trail-${h.name}`}
-                points={trailPoints.join(" ")}
-                fill="none"
-                stroke={h.color}
-                strokeWidth="4"
-                strokeLinecap="round"
-                opacity={0.5}
-                filter="url(#trailGlow)"
-              />
-            );
-          })}
-
-          {/* ── Horse dots ── */}
-          {horseStates.map((h, i) => {
-            const pos = getTrackPosition(
-              isRacing || isFinished ? h.horseProgress : 0,
-              h.laneOffset
-            );
-
-            return (
-              <g key={h.name}>
-                {/* Glow ring */}
-                {(isRacing || isFinished) && h.currentPosition <= 3 && (
-                  <circle
-                    cx={pos.x}
-                    cy={pos.y}
-                    r={10}
-                    fill="none"
-                    stroke={h.color}
-                    strokeWidth="1.5"
-                    opacity={0.4}
-                  />
-                )}
-
-                {/* Horse dot */}
-                <motion.circle
-                  cx={pos.x}
-                  cy={pos.y}
-                  r={h.currentPosition === 1 && (isRacing || isFinished) ? 7 : 6}
-                  fill={h.color}
-                  stroke="#fff"
-                  strokeWidth="1.5"
-                  filter={isRacing || isFinished ? "url(#horseGlow)" : undefined}
-                  style={{ transition: "cx 0.3s ease, cy 0.3s ease" }}
-                />
-
-                {/* Post number label */}
-                <text
-                  x={pos.x}
-                  y={pos.y + 3.5}
-                  fill="#fff"
-                  fontSize="8"
-                  fontWeight="800"
-                  fontFamily="system-ui"
-                  textAnchor="middle"
-                  style={{ pointerEvents: "none", transition: "x 0.3s ease, y 0.3s ease" }}
-                >
-                  {i + 1}
-                </text>
-
-                {/* Position callout near horse (during racing) */}
-                {(isRacing || isFinished) && h.currentPosition <= 3 && (
-                  <g style={{ transition: "transform 0.3s ease" }}>
-                    <rect
-                      x={pos.x + 10}
-                      y={pos.y - 8}
-                      width={h.name.length * 5.5 + 28}
-                      height={16}
-                      rx={4}
-                      fill={BG_CARD}
-                      stroke={h.color}
-                      strokeWidth="1"
-                      opacity={0.92}
-                      style={{ transition: "x 0.3s ease, y 0.3s ease" }}
-                    />
-                    <text
-                      x={pos.x + 14}
-                      y={pos.y + 3}
-                      fill={h.currentPosition === 1 ? GOLD : "#fff"}
-                      fontSize="8"
-                      fontWeight="700"
-                      fontFamily="system-ui"
-                      style={{ transition: "x 0.3s ease, y 0.3s ease" }}
-                    >
-                      {h.currentPosition === 1 ? "1st" : h.currentPosition === 2 ? "2nd" : "3rd"}{" "}
-                      <tspan fill="#fff" fontWeight="600">{h.name}</tspan>
-                    </text>
-                  </g>
-                )}
-              </g>
-            );
-          })}
-
-          {/* ── Infield Stats ── */}
-          <text
-            x={CX}
-            y={CY - 20}
-            fill="#fff"
-            fontSize="13"
-            fontWeight="800"
-            fontFamily="system-ui"
-            textAnchor="middle"
-            opacity={0.9}
-          >
-            {isFinished ? "OFFICIAL RESULTS" : isRacing ? "RACE IN PROGRESS" : "AWAITING START"}
-          </text>
-          <text
-            x={CX}
-            y={CY + 2}
-            fill={GOLD}
-            fontSize="22"
-            fontWeight="900"
-            fontFamily="monospace"
-            textAnchor="middle"
-          >
-            {(progress * distance).toFixed(1)}f / {distance}f
-          </text>
-          {leader && (isRacing || isFinished) && (
-            <text
-              x={CX}
-              y={CY + 24}
-              fill="rgba(255,255,255,0.5)"
-              fontSize="10"
-              fontFamily="system-ui"
-              textAnchor="middle"
+      {/* ─── Track View — horizontal lanes ─── */}
+      <div className="relative" style={{ padding: "0" }}>
+        {/* Furlong markers along top */}
+        <div className="relative h-5 mx-16" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+          <div className="absolute left-0 top-0 h-full flex items-center">
+            <span className="text-[8px] font-mono" style={{ color: TEXT_DIM }}>Start</span>
+          </div>
+          {furlongMarks.map((m) => (
+            <div
+              key={m.furlong}
+              className="absolute top-0 h-full flex items-center"
+              style={{ left: `${m.pct * 100}%`, transform: "translateX(-50%)" }}
             >
-              {isFinished ? "Winner" : "Leading"}: {leader.name} ({leader.currentSpeed} ft/s)
-            </text>
-          )}
-        </svg>
-      </div>
+              <span className="text-[8px] font-mono" style={{ color: TEXT_DIM }}>{m.furlong}f</span>
+            </div>
+          ))}
+          <div className="absolute right-0 top-0 h-full flex items-center">
+            <span className="text-[8px] font-bold font-mono" style={{ color: FINISH_RED }}>FIN</span>
+          </div>
+        </div>
 
-      {/* ─── Bottom Bar: Top 3 ─── */}
-      {(isRacing || isFinished) && (
-        <div
-          className="flex items-center justify-center gap-6 px-5 py-2.5"
-          style={{ borderTop: `1px solid ${BORDER}` }}
-        >
-          {sorted.slice(0, 3).map((h, i) => {
-            const medals = ["🥇", "🥈", "🥉"];
+        {/* Lanes */}
+        <div className="relative mx-0">
+          {/* Finish line */}
+          <div
+            className="absolute top-0 bottom-0 z-10"
+            style={{
+              right: 16,
+              width: 4,
+              background: `repeating-linear-gradient(180deg, #fff 0px, #fff 4px, #333 4px, #333 8px)`,
+              opacity: 0.5,
+            }}
+          />
+
+          {/* Horse lanes — sorted by current position for broadcast feel */}
+          {sorted.map((h, displayIdx) => {
+            const trackWidth = "calc(100% - 32px)";
+            const xPct = h.horseX * 100;
+            const isLeader = displayIdx === 0;
+            const isPodium = displayIdx < 3;
+
             return (
-              <div key={h.name} className="flex items-center gap-2">
-                <span className="text-sm">{medals[i]}</span>
-                <div
-                  className="w-2.5 h-2.5 rounded-full"
-                  style={{ background: h.color, boxShadow: `0 0 6px ${h.color}60` }}
-                />
-                <span
-                  className="text-xs font-bold"
-                  style={{ color: i === 0 ? GOLD : i === 1 ? "#c0c0c0" : "#cd7f32" }}
-                >
-                  {h.name}
-                </span>
-                {isFinished && (
-                  <span className="text-[10px] font-mono" style={{ color: TEXT_DIM }}>
-                    {h.currentSpeed} ft/s
+              <div
+                key={h.name}
+                className="flex items-center relative"
+                style={{
+                  height: LANE_H,
+                  background: displayIdx % 2 === 0 ? BG_LANE : BG_LANE_ALT,
+                  borderBottom: "1px solid rgba(255,255,255,0.03)",
+                }}
+              >
+                {/* Position badge + silk color */}
+                <div className="shrink-0 flex items-center gap-1.5 pl-2 pr-1" style={{ width: 52 }}>
+                  <span
+                    className="text-[10px] font-bold font-mono w-4 text-center"
+                    style={{ color: isLeader ? GOLD : isPodium ? TEXT_WHITE : TEXT_DIM }}
+                  >
+                    {h.currentPosition}
                   </span>
-                )}
+                  <div
+                    className="w-3.5 h-3.5 rounded-sm shrink-0"
+                    style={{ background: h.color, border: isLeader ? `1px solid ${GOLD}` : "none" }}
+                  />
+                </div>
+
+                {/* Horse name */}
+                <div className="shrink-0 w-28 pr-2">
+                  <span
+                    className="text-[10px] font-semibold truncate block"
+                    style={{ color: isLeader ? GOLD : isPodium ? TEXT_WHITE : TEXT_DIM }}
+                  >
+                    {h.name}
+                  </span>
+                </div>
+
+                {/* Track lane with horse dot */}
+                <div className="flex-1 relative h-full" style={{ marginRight: 20 }}>
+                  {/* Dirt track background */}
+                  <div className="absolute inset-0" style={{
+                    background: `linear-gradient(180deg, rgba(61,46,31,0.15) 0%, rgba(61,46,31,0.05) 100%)`,
+                  }} />
+
+                  {/* Rail lines */}
+                  <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "rgba(255,255,255,0.04)" }} />
+
+                  {/* Trail behind horse */}
+                  <div
+                    className="absolute top-1/2 -translate-y-1/2 h-1 rounded-full"
+                    style={{
+                      left: 0,
+                      width: `${xPct}%`,
+                      background: `linear-gradient(to right, transparent 0%, ${h.color}30 50%, ${h.color}60 100%)`,
+                      transition: "width 0.25s ease-out",
+                    }}
+                  />
+
+                  {/* Horse dot */}
+                  <div
+                    className="absolute top-1/2 -translate-y-1/2 flex items-center gap-1"
+                    style={{
+                      left: `${xPct}%`,
+                      transform: "translate(-50%, -50%)",
+                      transition: "left 0.25s ease-out",
+                    }}
+                  >
+                    <div
+                      className="rounded-full"
+                      style={{
+                        width: isLeader ? 12 : 10,
+                        height: isLeader ? 12 : 10,
+                        background: h.color,
+                        border: `2px solid ${isLeader ? GOLD : "#fff"}`,
+                        boxShadow: isLeader ? `0 0 8px ${GOLD}60` : `0 0 4px ${h.color}40`,
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Speed readout */}
+                <div className="shrink-0 w-12 text-right pr-2">
+                  <span className="text-[9px] font-mono" style={{ color: TEXT_DIM }}>
+                    {(isRacing || isFinished) ? `${h.currentSpeed}` : ""}
+                  </span>
+                </div>
               </div>
             );
           })}
         </div>
+      </div>
+
+      {/* ─── Running Order Strip — broadcast-style bottom bar ─── */}
+      {(isRacing || isFinished) && (
+        <div
+          className="flex items-center gap-1 px-3 py-2 overflow-x-auto"
+          style={{ background: "rgba(255,255,255,0.03)", borderTop: "1px solid rgba(255,255,255,0.06)" }}
+        >
+          {sorted.slice(0, Math.min(5, n)).map((h, i) => (
+            <div key={h.name} className="flex items-center gap-1.5 shrink-0 px-2 py-1 rounded"
+              style={{
+                background: i === 0 ? `${GOLD}15` : "transparent",
+                border: i === 0 ? `1px solid ${GOLD}30` : "1px solid transparent",
+              }}>
+              <span className="text-[10px] font-bold" style={{ color: i === 0 ? GOLD : TEXT_DIM }}>
+                {ordinal(i + 1)}
+              </span>
+              <div className="w-2.5 h-2.5 rounded-sm" style={{ background: h.color }} />
+              <span className="text-[10px] font-semibold" style={{ color: i === 0 ? TEXT_WHITE : TEXT_DIM }}>
+                {h.name}
+              </span>
+              {i > 0 && (
+                <span className="text-[9px] font-mono" style={{ color: TEXT_DIM }}>
+                  {((sorted[0].horseX - h.horseX) * distance).toFixed(1)}L
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
       )}
 
-      {/* ─── Progress Bar ─── */}
-      <div className="h-1" style={{ background: BORDER }}>
+      {/* ─── Progress bar ─── */}
+      <div className="h-1" style={{ background: "rgba(255,255,255,0.05)" }}>
         <div
           className="h-full transition-all duration-300"
           style={{
-            background: isFinished
-              ? `linear-gradient(90deg, ${GOLD}, #f0d060)`
-              : "linear-gradient(90deg, #ef4444, #f97316)",
+            background: isFinished ? GOLD : `linear-gradient(90deg, ${FINISH_RED}, #f97316)`,
             width: `${progress * 100}%`,
           }}
         />
