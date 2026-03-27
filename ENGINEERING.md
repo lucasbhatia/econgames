@@ -228,3 +228,98 @@ Pages: /, /preview, /live, /simulate, /profiles/[slug]
 | Live (`/live`) | Pipeline speed figures blended 30% into Monte Carlo inputs | Night race odds reflect real data |
 | Simulate (`/simulate`) | Model R², MAE, top feature, transfer R² | Contextualizes the simulation engine |
 | X-Ray (`/xray`) | Raw GPS gate data (replay, speed traces, stride charts) | Direct data exploration |
+
+---
+
+## ML Roadmap
+
+### Current State
+
+**Built and working:**
+- 7-stage ETL pipeline processing 985K rows from 5 Excel files
+- Beyer-style speed figures normalized by track/surface/distance (27,800 figures)
+- Ridge + GBM ensemble model (R²=0.367, MAE=1.6 on 12,405 validation races)
+- Transfer model for non-GPS tracks (R²=0.356, leave-one-track-out CV)
+- 464 upcoming races scored with win/place/show probabilities
+- GPS Edge analysis (model vs morning line) with value classification
+- A/B proof: GPS adds +60% R² over traditional-only baseline
+
+**Honest limitations:**
+- Model R²=0.367 means 63% of variation is unexplained (horse racing is inherently noisy)
+- Only 3 months of data (Dec 2025 - Mar 2026) — no seasonal patterns captured
+- 11 features, no jockey/trainer interactions modeled
+- Transfer model explains only 36% of GPS speed figure variation
+
+### GPS Feature Engineering Backlog
+
+| Feature | Type | Description | Engineering Notes |
+|---------|------|-------------|-------------------|
+| Cornering speed profile | GPS | Speed change through turns vs straights | Requires track geometry mapping (which gates are on turns) |
+| Positional crowding metric | GPS | How boxed-in a horse was at each gate | Compare position to neighboring horses' positions at same gate |
+| Ground loss estimate | GPS | Extra distance traveled from wide running | Distance from rail at each gate × number of gates × curvature |
+| Sectional pace delta | GPS | Speed relative to the field at each gate | Requires per-gate field-average normalization |
+| Energy expenditure proxy | GPS/Hybrid | Stride frequency² × speed × distance per segment | Biomechanical fatigue model from stride + speed data |
+| Deceleration rate | GPS | Speed falloff from peak to finish | Simple: (peak_speed - final_speed) / gates_after_peak |
+| Running style stability | GPS | How consistent the horse's style is across races | Variance of early_position_avg across race history |
+| Track bias index | GPS | Per-track, per-day advantage from post position vs finish | Regression of (finish - post_position) on race conditions |
+
+### Model Improvement Backlog
+
+| Model | Next Step | Expected Impact |
+|-------|-----------|----------------|
+| Finish position model | Add jockey/trainer features from upcoming races Excel sheet 1 | +3-5% R² |
+| Finish position model | Add race class interaction (class × speed_figure) | +1-2% R² |
+| Speed figure model | Use per-gate speeds instead of per-race averages | Better resolution for pace analysis |
+| Transfer model | Add more traditional features (lengths behind at calls, position changes) | Improve non-GPS R² from 0.36 → 0.45+ |
+| New: Win probability calibration | Platt scaling on softmax probabilities | Better-calibrated win%, place%, show% |
+| New: Exotic bet pricing | Model exact finish order probabilities for exactas/trifectas | Would enable fair exotic odds |
+
+### GPS Fallback Strategy
+
+**Current state:** Transfer model (R²=0.356) estimates GPS speed figures from traditional features for non-GPS tracks. Preview page shows yellow warning badge with R² and plain-English explanation.
+
+**Implementation plan for deeper fallback:**
+1. For horses with GPS history at OTHER tracks: use their GPS profile directly (already implemented)
+2. For horses with zero GPS data: use transfer model (already implemented)
+3. For entire tracks with no GPS: estimate track speed baseline from traditional timing + distance, infer running styles from point-of-call positions
+4. **Not yet built:** Running style inference from traditional position data (use positions_at_calls array to classify Front Runner/Stalker/Closer without GPS)
+
+### Model → Frontend Connection Map
+
+| Model Output | Pipeline File | App Import | UI Component | What User Sees | Explanation Layer |
+|-------------|---------------|------------|-------------|----------------|-------------------|
+| Ensemble R², MAE | model-diagnostics.json | pipeline-output.ts → MODEL_DIAGNOSTICS | Home: A/B proof cards | "0.37 R² (accuracy)" | ✅ Has plain-English context |
+| GPS improvement % | model-diagnostics.json | → gps_added_value | Home: green card | "+60% accuracy" | ✅ Clear |
+| Feature importance | model-diagnostics.json | → ridge.feature_importance | Simulate: stats bar "Top feature: speed_figure" | Feature name only | ❌ Needs tooltip explaining what the feature is |
+| Transfer R² | transfer-diagnostics.json | → TRANSFER_DIAGNOSTICS | Preview: non-GPS badge | "R² = 0.36" | ✅ Has % explanation |
+| Speed figures (per horse) | horse-speed-profiles.json | → HORSE_SPEED_FIGURES | Profile: stat cards | "Speed Figure: 128" | ❌ No "100 = average" baseline |
+| Win probability | upcoming-predictions.json | → computed locally via softmax | Preview: Model Win% column | "22.3%" | ✅ Has column header context |
+| GPS Edge | computed in preview page | → valueLookup | Preview: badge | "+3.2%" colored badge | ✅ Color + tooltip |
+| Speed figure blend | HORSE_SPEED_FIGURES | live/page.tsx | Race animation speed | Invisible (30% blend into SimHorse) | ❌ User doesn't know pipeline affects race |
+
+### Anyone-Friendly Implementation Backlog
+
+| Priority | Gap | Page | Fix | Effort |
+|----------|-----|------|-----|--------|
+| P0 | Speed figures shown without "100 = average" baseline | Profiles | Add scale context to stat card | 30 min |
+| P0 | R² shown as raw decimal | Home, Simulate | Use humanR2() from glossary.ts | 30 min |
+| P0 | "ft/s" unit unexplained | All speed displays | Add humanSpeed() with mph conversion | 1 hr |
+| P1 | Running styles unexplained on first encounter | Preview, Live | Add GlossaryTerm wrapper on first mention | 1 hr |
+| P1 | Simulation page stats bar uses raw technical labels | Simulate | Replace with humanR2(), humanMAE() | 30 min |
+| P1 | Live page has no indicator that pipeline data affects race | Live | Add "GPS-Enhanced" badge on race card | 30 min |
+| P2 | X-Ray page has no "GPS Insight of the Race" card | X-Ray | Surface top GPS finding per race | 2 hr |
+| P2 | No glossary page/modal accessible from any screen | Global | Add glossary modal to Navbar | 2 hr |
+| P2 | Chart axis labels use technical units without explanation | Arena components | Add human-readable axis labels | 1 hr |
+| P3 | No onboarding flow for first-time visitors | Global | Build 3-step intro modal | 4 hr |
+
+### Priority Order — Top 5 Engineering Tasks
+
+1. **Wire glossary.ts into all pages** (P0) — Replace raw terms with GlossaryTerm components and ContextNumber wrappers across home, preview, simulate, profile pages. Highest impact for newcomer accessibility. ~3 hours.
+
+2. **Build GPS Insight card for X-Ray** (P2) — Surface the single most interesting GPS finding per race in plain English ("Horse 3 ran 4 meters extra due to traffic"). Makes the GPS value viscerally obvious. ~2 hours.
+
+3. **Add running style inference from traditional data** (GPS Fallback) — Classify Front Runner/Stalker/Closer from positions_at_calls without needing GPS. Extends coverage to all horses. ~3 hours.
+
+4. **Add jockey/trainer features to model** (Model Improvement) — Use the upcoming races Excel sheet 1 jockey/trainer columns as model inputs. Expected +3-5% R². ~2 hours.
+
+5. **Build calibrated win probability model** (Model Improvement) — Replace softmax temperature hack with Platt scaling calibrated on validation data. Better odds, better GPS Edge detection. ~2 hours.
