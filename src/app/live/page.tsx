@@ -2352,14 +2352,6 @@ export default function LiveRacingPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            {user && (
-              <div className="text-right mr-2 px-4 py-2 rounded-xl" style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}>
-                <div className="text-[10px] uppercase font-semibold" style={{ color: TEXT_MUTED }}>Balance</div>
-                <div className="text-lg font-bold font-mono" style={{ color: GOLD }}>
-                  <AnimatedBalance value={user.bankroll - (phase !== "results" ? bets.reduce((s, b) => s + b.totalCost, 0) : 0)} />
-                </div>
-              </div>
-            )}
             <TimerRing seconds={timer} total={timerTotal} phase={phase} label={phaseLabel} />
           </div>
         </div>
@@ -2379,14 +2371,9 @@ export default function LiveRacingPage() {
                       <Ticket className="w-4 h-4" style={{ color: GOLD }} />
                       <h3 className="text-sm font-bold" style={{ color: TEXT }}>Race Card</h3>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] px-2 py-0.5 rounded" style={{ background: BG_CARD, color: TEXT_SEC, border: `1px solid ${BORDER}` }}>
-                        {race.horses.length} runners
-                      </span>
-                      <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-lg" style={{ background: `${GOLD}10`, color: GOLD, border: `1px solid ${GOLD}30` }}>
-                        ${user.bankroll.toLocaleString()}
-                      </span>
-                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded" style={{ background: BG_CARD, color: TEXT_SEC, border: `1px solid ${BORDER}` }}>
+                      {race.horses.length} runners
+                    </span>
                   </div>
 
                   {/* Odds table */}

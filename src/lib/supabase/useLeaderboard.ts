@@ -134,8 +134,9 @@ export function useLeaderboard() {
     }
 
     fetchLeaderboard();
+    fetchRecentWins();
 
-    // Real-time subscription
+    // Real-time subscription — refetch leaderboard + recent wins on any player/bet change
     const channel = supabase
       .channel("leaderboard")
       .on(
@@ -143,6 +144,14 @@ export function useLeaderboard() {
         { event: "*", schema: "public", table: "players" },
         () => {
           fetchLeaderboard();
+          fetchRecentWins();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "bets" },
+        () => {
+          fetchRecentWins();
         }
       )
       .subscribe((status) => {
@@ -226,10 +235,6 @@ export function useLeaderboard() {
       }
     } catch {}
   }, []);
-
-  useEffect(() => {
-    fetchRecentWins();
-  }, [fetchRecentWins]);
 
   return {
     leaderboard,
