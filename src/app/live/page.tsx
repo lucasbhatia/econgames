@@ -1802,7 +1802,7 @@ function SharedLeaderboard({
                     {school.totalProfit > 0 ? "+" : ""}{school.totalProfit === 0 ? "$0" : `$${Math.abs(school.totalProfit).toLocaleString()}`}
                   </div>
                   <div className="text-[9px]" style={{ color: TEXT_MUTED }}>
-                    Top: {school.topPlayer}
+                    {school.players} player{school.players !== 1 ? "s" : ""}
                   </div>
                 </div>
               </div>
