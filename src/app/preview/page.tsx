@@ -524,6 +524,45 @@ export default function PreviewPage() {
           </div>
         </div>
 
+        {/* GPS Advantage — what GPS reveals that traditional doesn't */}
+        <div className="rounded-xl border-2 border-[#b8941f30] bg-[#b8941f04] p-5 mb-8">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "#b8941f" }}>
+              GPS Advantage
+            </span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#b8941f15] text-[#b8941f] font-medium">
+              Beyond Traditional Metrics
+            </span>
+          </div>
+          <p className="text-sm text-[#1a1a2a] leading-relaxed mb-3">
+            {(() => {
+              const closers = race.entries.filter(e => e.runningStyle === "Closer");
+              const frontRunners = race.entries.filter(e => e.runningStyle === "Front Runner");
+              const topEfficiency = [...race.entries].sort((a, b) => b.strideEfficiency - a.strideEfficiency)[0];
+              const topSpeed = [...race.entries].sort((a, b) => b.speedFigure - a.speedFigure)[0];
+
+              if (topEfficiency && topSpeed && topEfficiency.horse !== topSpeed.horse) {
+                return `Traditional speed figures favor ${topSpeed.horse} (${topSpeed.speedFigure}), but GPS stride efficiency reveals ${topEfficiency.horse} (${topEfficiency.strideEfficiency.toFixed(2)} efficiency) may have untapped energy reserves. In ${race.distance}F races, horses with higher stride efficiency close stronger — a pattern invisible in traditional data.`;
+              }
+              if (frontRunners.length >= 3) {
+                return `Traditional handicapping sees ${frontRunners.length} front runners and predicts pace trouble. GPS goes further — stride efficiency data shows which closers actually have the biomechanical capacity to capitalize on a fast pace, separating true closers from horses that just run slow early.`;
+              }
+              return `GPS stride efficiency (${topEfficiency?.strideEfficiency.toFixed(2) ?? "N/A"} for ${topEfficiency?.horse ?? "top horse"}) provides a biomechanical edge metric unavailable in traditional past performances. This measures how efficiently each stride converts to forward speed — a key predictor of late-race stamina.`;
+            })()}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {race.entries.slice(0, 5).map((e) => (
+              <span key={e.horse} className="text-[10px] px-2 py-1 rounded-lg bg-white border border-[#e5e2db]">
+                <span className="font-semibold text-[#1a1a2a]">{e.horse}</span>
+                <span className="mx-1 text-[#9ca3af]">·</span>
+                <span className="text-[#b8941f] font-mono">{e.strideEfficiency.toFixed(2)} eff</span>
+                <span className="mx-1 text-[#9ca3af]">·</span>
+                <span className="text-[#6b7280] font-mono">{e.speedFigure} spd</span>
+              </span>
+            ))}
+          </div>
+        </div>
+
         {/* Top Contenders */}
         <div>
           <h2 className="text-lg font-semibold text-[#1a1a2a] mb-4">

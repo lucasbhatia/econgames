@@ -61,9 +61,13 @@ export default function Home() {
             <h1 className="font-heading text-4xl md:text-5xl font-bold text-[#1a1a2a] mb-5 leading-[1.15]">
               GPS Racing Intelligence
             </h1>
-            <p className="text-[#6b7280] text-lg leading-relaxed max-w-2xl mx-auto mb-10">
+            <p className="text-[#6b7280] text-lg leading-relaxed max-w-2xl mx-auto mb-4">
               See horse races like never before — with real-time speed, stride,
               and position data from GPS tracking.
+            </p>
+            <p className="text-[#9ca3af] text-sm max-w-xl mx-auto mb-10">
+              Built on 985,000 rows of real GPS data across 12 tracks. Combining traditional handicapping
+              with GPS-exclusive metrics like stride efficiency and sectional speed to reveal what the stopwatch can&rsquo;t.
             </p>
           </motion.div>
 
@@ -154,9 +158,73 @@ export default function Home() {
       </section>
 
       {/* ═══════════════════════════════════════
-          3. QUICK GLOSSARY
+          2b. WHY GPS? — Value Demonstration
       ═══════════════════════════════════════ */}
       <section className="py-20 bg-[#f8f6f2]">
+        <div className={S}>
+          <motion.div {...fade}>
+            <h2 className="font-heading text-3xl md:text-4xl font-bold text-[#1a1a2a] mb-3">
+              Why GPS Changes Everything
+            </h2>
+            <p className="text-base text-[#6b7280] mb-10 max-w-2xl">
+              Traditional race data tells you <em>what happened</em>. GPS data reveals <em>why it happened</em> — and what&rsquo;s likely to happen next.
+            </p>
+          </motion.div>
+
+          {/* Comparison table */}
+          <div className="rounded-2xl border border-[#e5e2db] overflow-hidden mb-10 bg-white">
+            <div className="grid grid-cols-3 text-sm font-bold border-b border-[#e5e2db]">
+              <div className="p-4 bg-[#f8f6f2] text-[#9ca3af]">Metric</div>
+              <div className="p-4 bg-[#f8f6f2] text-[#6b7280]">Traditional Data</div>
+              <div className="p-4 bg-[#b8941f10] text-[#b8941f]">GPS Data</div>
+            </div>
+            {[
+              { metric: "Speed", traditional: "Final time only (total race)", gps: "Speed at every half-furlong — see acceleration, fatigue, bursts" },
+              { metric: "Position", traditional: "Finish position + maybe a few call points", gps: "Position at every gate — see exactly where moves happen" },
+              { metric: "Stride", traditional: "Not available", gps: "Stride length at every point — reveals biomechanical efficiency" },
+              { metric: "Running Style", traditional: "Subjective label from handicapper", gps: "Data-driven: classified from actual early/late speed ratios" },
+              { metric: "Race Replay", traditional: "Video only (hard to compare horses)", gps: "Interactive replay with speed overlays, position tracking, comparisons" },
+              { metric: "Predictions", traditional: "Based on past finishes and odds", gps: "Monte Carlo simulation using actual speed curves + traditional factors" },
+            ].map((row, i) => (
+              <div key={i} className="grid grid-cols-3 text-sm border-b border-[#e5e2db] last:border-0">
+                <div className="p-4 font-semibold text-[#1a1a2a]">{row.metric}</div>
+                <div className="p-4 text-[#6b7280]">{row.traditional}</div>
+                <div className="p-4 text-[#1a1a2a] font-medium" style={{ background: "#b8941f06" }}>{row.gps}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Real example */}
+          <motion.div {...fade} className="rounded-2xl border border-[#e5e2db] bg-white p-6 md:p-8">
+            <h3 className="text-lg font-bold text-[#1a1a2a] mb-4">Real Example: What GPS Reveals</h3>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="p-4 rounded-xl bg-[#f8f6f2] border border-[#e5e2db]">
+                <div className="text-xs font-bold uppercase text-[#9ca3af] mb-2">Traditional View</div>
+                <p className="text-sm text-[#6b7280] leading-relaxed">
+                  &ldquo;Incredibolt finished 1st, winning by 1.5 lengths. Time: 1:49.2 for 9 furlongs. Odds: 6.2-1.&rdquo;
+                </p>
+                <p className="text-xs text-[#9ca3af] mt-3">
+                  You know the result, but not <em>how</em> it happened.
+                </p>
+              </div>
+              <div className="p-4 rounded-xl border-2 border-[#b8941f30] bg-[#b8941f06]">
+                <div className="text-xs font-bold uppercase text-[#b8941f] mb-2">GPS View</div>
+                <p className="text-sm text-[#1a1a2a] leading-relaxed">
+                  &ldquo;Incredibolt sat 6th through the first 5 furlongs at 16.6 ft/s, then accelerated to 18.5 ft/s (+1.9 burst) over the final 3F with a stride efficiency of 2.41 — the highest in the field. This closing kick pattern, invisible in traditional data, is repeatable and predictive.&rdquo;
+                </p>
+                <p className="text-xs text-[#b8941f] mt-3 font-medium">
+                  GPS reveals the <em>mechanism</em> behind the win — and flags it for next time.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════
+          3. QUICK GLOSSARY
+      ═══════════════════════════════════════ */}
+      <section className="py-20">
         <div className={S}>
           <motion.div {...fade}>
             <h2 className="font-heading text-3xl md:text-4xl font-bold text-[#1a1a2a] mb-10">
