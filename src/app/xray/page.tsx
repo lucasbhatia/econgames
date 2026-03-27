@@ -184,30 +184,30 @@ export default function RaceXRayPage() {
           </p>
         </header>
 
-        {/* ------ Race selector ------------------------------------ */}
+        {/* ------ Race selector — clean pill buttons ------------------------------------ */}
         <div className="mb-6">
           <p className="text-xs font-medium mb-2" style={{ color: COLOR.muted }}>
-            Select a race to analyze — {ALL_RACES.length} GPS-tracked races available
+            {ALL_RACES.length} GPS-tracked races available
           </p>
           <div className="flex flex-wrap gap-2">
             {ALL_RACES.map((r, idx) => (
               <button
                 key={`${r.track}-${r.raceNum}-${r.date}`}
                 onClick={() => changeRace(idx)}
-                className="rounded-lg px-4 py-2.5 text-left transition-all text-sm"
+                className="rounded-lg px-3 py-2 text-left transition-all text-xs"
                 style={{
-                  backgroundColor: raceIndex === idx ? `${COLOR.gold}10` : COLOR.card,
+                  backgroundColor: raceIndex === idx ? `${COLOR.gold}12` : COLOR.card,
                   border: `1.5px solid ${raceIndex === idx ? COLOR.gold : COLOR.border}`,
                   color: raceIndex === idx ? COLOR.text : COLOR.secondary,
                 }}
               >
-                <span className="font-semibold">{r.track.trim()} R{r.raceNum}</span>
-                <span className="mx-1" style={{ color: COLOR.muted }}>&middot;</span>
-                <span>{r.date}</span>
-                <span className="mx-1" style={{ color: COLOR.muted }}>&middot;</span>
-                <span>{r.distance}F {r.surface === "D" ? "Dirt" : r.surface === "T" ? "Turf" : r.surface}</span>
-                <span className="mx-1" style={{ color: COLOR.muted }}>&middot;</span>
-                <span style={{ color: COLOR.gold }}>${r.purse >= 1000000 ? `${(r.purse/1000000).toFixed(0)}M` : `${(r.purse/1000).toFixed(0)}K`}</span>
+                <span className="font-bold">{r.track.trim()} R{r.raceNum}</span>
+                <span className="ml-1.5 text-[10px]" style={{ color: COLOR.muted }}>
+                  {r.distance}F {r.surface === "D" ? "Dirt" : "Turf"}
+                </span>
+                <span className="ml-1.5 text-[10px] font-semibold" style={{ color: COLOR.gold }}>
+                  ${r.purse >= 1000000 ? `${(r.purse/1000000).toFixed(0)}M` : `${(r.purse/1000).toFixed(0)}K`}
+                </span>
               </button>
             ))}
           </div>
@@ -215,74 +215,67 @@ export default function RaceXRayPage() {
 
         {/* ------ Selected race info bar ------------------------------ */}
         <div
-          className="mb-8 flex flex-wrap items-center gap-3 rounded-lg px-5 py-3"
+          className="mb-6 flex flex-wrap items-center gap-2 rounded-xl px-4 py-3"
           style={{ backgroundColor: COLOR.card, border: `1px solid ${COLOR.border}` }}
         >
           <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: COLOR.gold }} />
-          <span className="text-sm font-medium" style={{ color: COLOR.text }}>
+          <span className="text-sm font-semibold" style={{ color: COLOR.text }}>
             {race.track.trim()} Race {race.raceNum}
           </span>
-          <span className="text-sm" style={{ color: COLOR.muted }}>&middot;</span>
-          <span className="text-sm" style={{ color: COLOR.secondary }}>{race.date}</span>
-          <span className="text-sm" style={{ color: COLOR.muted }}>&middot;</span>
-          <span className="text-sm" style={{ color: COLOR.secondary }}>
-            {race.distance}F {race.surface === "D" ? "Dirt" : race.surface === "T" ? "Turf" : race.surface}
-          </span>
-          <span className="text-sm" style={{ color: COLOR.muted }}>&middot;</span>
-          <span className="text-sm" style={{ color: COLOR.secondary }}>
-            ${race.purse >= 1000000 ? `${(race.purse/1000000).toFixed(0)}M` : `${(race.purse/1000).toFixed(0)}K`} {race.raceType === "STK" ? "Stakes" : race.raceType}
-          </span>
-          <span className="text-sm" style={{ color: COLOR.muted }}>
-            &middot;
-          </span>
-          <span className="text-sm" style={{ color: COLOR.secondary }}>
-            {race.horses.length} runners
-          </span>
-
-          {/* Simulate This Race button */}
+          {[
+            race.date,
+            `${race.distance}F ${race.surface === "D" ? "Dirt" : race.surface === "T" ? "Turf" : race.surface}`,
+            `$${race.purse >= 1000000 ? `${(race.purse/1000000).toFixed(0)}M` : `${(race.purse/1000).toFixed(0)}K`} ${race.raceType === "STK" ? "Stakes" : race.raceType}`,
+            `${race.horses.length} runners`,
+          ].map((info, idx) => (
+            <span key={idx} className="text-[11px] px-2 py-0.5 rounded" style={{ background: COLOR.bg, color: COLOR.secondary, border: `1px solid ${COLOR.border}` }}>
+              {info}
+            </span>
+          ))}
           <Link
             href={`/simulate?race=${raceIndex}`}
-            className="ml-auto flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-sm font-semibold transition-all hover:scale-[1.02]"
-            style={{
-              backgroundColor: COLOR.gold,
-              color: "#fff",
-            }}
+            className="ml-auto flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all hover:scale-[1.02]"
+            style={{ backgroundColor: COLOR.gold, color: "#fff" }}
           >
-            <Play size={14} fill="#fff" />
-            Simulate This Race
+            <Play size={12} fill="#fff" />
+            Simulate
           </Link>
         </div>
 
-        {/* ------ Mobile horse pills (below lg) -------------------- */}
-        <div className="mb-4 flex gap-2 overflow-x-auto pb-2 lg:hidden">
-          {race.horses.map((h, i) => {
-            const active = selectedHorses.includes(i);
-            return (
-              <button
-                key={h.name}
-                onClick={() => toggleHorse(i)}
-                className="flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all"
-                style={{
-                  backgroundColor: active ? COLOR.card : "transparent",
-                  border: `1px solid ${active ? COLOR.gold : COLOR.border}`,
-                  color: active ? COLOR.text : COLOR.muted,
-                  opacity: !active && selectedHorses.length >= MAX_SELECTED ? 0.4 : 1,
-                }}
-              >
-                <span
-                  className="inline-block h-2 w-2 rounded-full"
-                  style={{ backgroundColor: HORSE_COLORS[i] }}
-                />
-                <Link
-                  href={`/profiles/${toSlug(h.name)}`}
-                  className="hover:underline"
-                  onClick={(e) => e.stopPropagation()}
+        {/* ------ Mobile horse pills (below lg) — simplified -------------------- */}
+        <div className="mb-4 lg:hidden">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-semibold uppercase" style={{ color: COLOR.muted }}>
+              Select horses to compare ({selectedHorses.length}/{MAX_SELECTED})
+            </span>
+            {selectedHorses.length >= MAX_SELECTED && (
+              <span className="text-[10px] font-medium" style={{ color: COLOR.gold }}>Max selected</span>
+            )}
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {race.horses.map((h, i) => {
+              const active = selectedHorses.includes(i);
+              const disabled = !active && selectedHorses.length >= MAX_SELECTED;
+              return (
+                <button
+                  key={h.name}
+                  onClick={() => toggleHorse(i)}
+                  disabled={disabled}
+                  className="flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all"
+                  style={{
+                    backgroundColor: active ? `${COLOR.gold}12` : COLOR.card,
+                    border: `1px solid ${active ? COLOR.gold : COLOR.border}`,
+                    color: active ? COLOR.text : COLOR.muted,
+                    opacity: disabled ? 0.35 : 1,
+                    cursor: disabled ? "not-allowed" : "pointer",
+                  }}
                 >
+                  <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: HORSE_COLORS[i] }} />
                   {h.name}
-                </Link>
-              </button>
-            );
-          })}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* ------ Main 2-column layout ----------------------------- */}
@@ -387,8 +380,8 @@ export default function RaceXRayPage() {
                 >
                   Field
                 </h2>
-                <span className="text-xs" style={{ color: COLOR.muted }}>
-                  {selectedHorses.length}/{MAX_SELECTED} selected
+                <span className="text-xs" style={{ color: selectedHorses.length >= MAX_SELECTED ? COLOR.gold : COLOR.muted }}>
+                  {selectedHorses.length}/{MAX_SELECTED}{selectedHorses.length >= MAX_SELECTED ? " (max)" : ""}
                 </span>
               </div>
 

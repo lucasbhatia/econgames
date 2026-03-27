@@ -262,7 +262,7 @@ export default function RaceReplay({ horses, colors, distance }: RaceReplayProps
       {isFinished && (
         <div className="flex items-center gap-4 px-4 py-2" style={{ borderTop: `1px solid ${BORDER_DARK}` }}>
           {sorted.slice(0, 3).map((h, i) => {
-            const medals = ["\uD83E\uDD47", "\uD83E\uDD48", "\uD83E\uDD49"];
+            const medals = ["🥇", "🥈", "🥉"];
             return (
               <div key={h.name} className="flex items-center gap-1.5">
                 <span className="text-sm">{medals[i]}</span>
