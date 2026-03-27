@@ -2323,8 +2323,14 @@ export default function LiveRacingPage() {
                   </div>
                   <div className="space-y-1.5">
                     {bets.length === 0 && (
-                      <div className="text-center py-4 rounded-lg" style={{ background: BG_CARD }}>
+                      <div className="text-center py-3 rounded-lg" style={{ background: BG_CARD }}>
                         <p className="text-xs" style={{ color: TEXT_MUTED }}>No bets placed this race</p>
+                        {user && user.history.length > 0 && (
+                          <p className="text-[10px] mt-1" style={{ color: user.history[user.history.length - 1].profit >= 0 ? GREEN : RED }}>
+                            Last race: {user.history[user.history.length - 1].profit >= 0 ? "+" : ""}
+                            ${user.history[user.history.length - 1].profit}
+                          </p>
+                        )}
                       </div>
                     )}
                     {bets.map((bet) => {
@@ -2439,11 +2445,21 @@ export default function LiveRacingPage() {
                       </div>
                       <div className="text-right shrink-0">
                         <div className="text-lg font-bold font-mono" style={{ color: GOLD }}>
-                          <AnimatedBalance value={user.bankroll} />
+                          <AnimatedBalance value={
+                            phase === "betting" || phase === "post_parade" || phase === "racing"
+                              ? user.bankroll - bets.reduce((s, b) => s + b.totalCost, 0)
+                              : user.bankroll
+                          } />
                         </div>
-                        <div className="text-[9px] font-mono" style={{ color: user.totalProfit >= 0 ? GREEN : RED }}>
-                          {user.totalProfit >= 0 ? "+" : ""}{user.totalProfit} profit
-                        </div>
+                        {bets.length > 0 && phase !== "results" ? (
+                          <div className="text-[9px] font-mono" style={{ color: ORANGE }}>
+                            ${bets.reduce((s, b) => s + b.totalCost, 0)} wagered
+                          </div>
+                        ) : (
+                          <div className="text-[9px] font-mono" style={{ color: user.totalProfit >= 0 ? GREEN : RED }}>
+                            {user.totalProfit >= 0 ? "+" : ""}{user.totalProfit} profit
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -2457,10 +2473,20 @@ export default function LiveRacingPage() {
                         <div className="text-[9px] uppercase" style={{ color: TEXT_MUTED }}>Best Win</div>
                         <div className="text-xs font-bold font-mono" style={{ color: GOLD }}>${user.biggestWin}</div>
                       </div>
-                      <div className="flex-1 py-1.5 rounded-lg text-center" style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}>
-                        <div className="text-[9px] uppercase" style={{ color: TEXT_MUTED }}>Next Race</div>
-                        <div className="text-xs font-bold font-mono" style={{ color: BLUE }}>
-                          {formatTimer(Math.max(0, Math.ceil(CYCLE_DURATION - getTimeInCycle())))}
+                      <div className="flex-1 py-1.5 rounded-lg text-center" style={{
+                        background: bets.length > 0 && phase !== "results" ? `${GOLD}08` : BG_CARD,
+                        border: `1px solid ${bets.length > 0 && phase !== "results" ? `${GOLD}30` : BORDER}`,
+                      }}>
+                        <div className="text-[9px] uppercase" style={{ color: TEXT_MUTED }}>
+                          {bets.length > 0 && phase !== "results" ? "Bets" : "Next Race"}
+                        </div>
+                        <div className="text-xs font-bold font-mono" style={{
+                          color: bets.length > 0 && phase !== "results" ? GOLD : BLUE,
+                        }}>
+                          {bets.length > 0 && phase !== "results"
+                            ? `${bets.length} slip${bets.length > 1 ? "s" : ""}`
+                            : formatTimer(Math.max(0, Math.ceil(CYCLE_DURATION - getTimeInCycle())))
+                          }
                         </div>
                       </div>
                     </div>
