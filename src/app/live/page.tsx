@@ -2648,6 +2648,75 @@ export default function LiveRacingPage() {
                   />
                 </div>
               )}
+
+              {/* YOUR BETS — persistent across post_parade, racing, results when bets exist */}
+              {phase !== "betting" && bets.length > 0 && (
+                <div className="p-4 rounded-2xl" style={{ background: BG_WHITE, border: `1.5px solid ${BORDER}` }}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Ticket className="w-4 h-4" style={{ color: GOLD }} />
+                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: TEXT_SEC }}>
+                      Your Bets This Race
+                    </span>
+                    <span className="ml-auto text-[10px] font-mono font-bold" style={{ color: TEXT_MUTED }}>
+                      ${bets.reduce((s, b) => s + b.totalCost, 0)} wagered
+                    </span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {bets.map((bet) => {
+                      const result = betResults.find((r) => r.bet.id === bet.id);
+                      return (
+                        <div
+                          key={bet.id}
+                          className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs"
+                          style={{
+                            background: result ? (result.won ? `${GREEN}06` : `${RED}04`) : BG_CARD,
+                            border: `1.5px solid ${result ? (result.won ? GREEN : `${RED}40`) : BORDER}`,
+                          }}
+                        >
+                          {result && (
+                            <div className="shrink-0">
+                              {result.won ? (
+                                <Check className="w-4 h-4" style={{ color: GREEN }} />
+                              ) : (
+                                <X className="w-4 h-4" style={{ color: RED }} />
+                              )}
+                            </div>
+                          )}
+                          <span
+                            className="font-semibold px-1.5 py-0.5 rounded text-[10px] shrink-0"
+                            style={{ background: `${GOLD}10`, color: GOLD }}
+                          >
+                            {BET_TYPE_CONFIG[bet.type].label}
+                          </span>
+                          <span className="flex-1 truncate font-medium" style={{ color: TEXT }}>
+                            {bet.horseNames.join(" → ")}
+                          </span>
+                          {result ? (
+                            <span className="font-mono font-bold shrink-0" style={{ color: result.won ? GREEN : RED }}>
+                              {result.won ? `+$${(result.payout - bet.totalCost).toLocaleString()}` : `-$${bet.totalCost}`}
+                            </span>
+                          ) : (
+                            <span className="font-mono font-bold shrink-0" style={{ color: TEXT }}>${bet.totalCost}</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {/* Net P&L during results */}
+                    {phase === "results" && betResults.length > 0 && (
+                      <div className="flex items-center justify-between px-3 py-2 rounded-lg mt-1"
+                        style={{
+                          background: (totalWinnings - totalWagered) >= 0 ? `${GREEN}08` : `${RED}06`,
+                          border: `1.5px solid ${(totalWinnings - totalWagered) >= 0 ? GREEN : RED}`,
+                        }}>
+                        <span className="text-xs font-semibold" style={{ color: TEXT }}>Race P&L</span>
+                        <span className="font-mono font-bold text-sm" style={{ color: (totalWinnings - totalWagered) >= 0 ? GREEN : RED }}>
+                          {(totalWinnings - totalWagered) >= 0 ? "+" : ""}{(totalWinnings - totalWagered).toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* ──── Center: Race Track (hidden during betting, 5 cols otherwise) ──── */}
