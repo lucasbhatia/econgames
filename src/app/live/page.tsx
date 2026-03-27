@@ -40,6 +40,7 @@ import { useLeaderboard } from "@/lib/supabase/useLeaderboard";
 import type { LeaderboardEntry, SchoolStanding } from "@/lib/supabase/useLeaderboard";
 import { hashPin } from "@/lib/auth/pin";
 import { registerPlayer, loginPlayer } from "@/lib/supabase/auth";
+import { getHorseImageUrl } from "@/lib/data/horse-images";
 
 /* ================================================================== */
 /*  Constants                                                          */
@@ -420,9 +421,8 @@ function getHorseSlug(name: string): string {
 }
 
 /** Find profile by horse name to get imageUrl */
-function getHorseImage(name: string): string | null {
-  const profile = ALL_PROFILES.find((p) => p.name === name);
-  return profile?.imageUrl ?? null;
+function getHorseImage(name: string): string {
+  return getHorseImageUrl(name);
 }
 
 

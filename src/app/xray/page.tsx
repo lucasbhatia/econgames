@@ -8,7 +8,7 @@ import RaceReplay from "@/components/arena/RaceReplay";
 import SpeedTelemetry from "@/components/arena/SpeedTelemetry";
 import StrideAnalysis from "@/components/arena/StrideAnalysis";
 import { FEATURED_RACE, HORSE_COLORS, ALL_RACES, type RaceData } from "@/lib/data/race-data";
-import { getProfile } from "@/lib/data/horse-profiles";
+import { getHorseImageUrl } from "@/lib/data/horse-images";
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
