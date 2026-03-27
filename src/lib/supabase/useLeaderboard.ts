@@ -53,8 +53,9 @@ function isConfigured(): boolean {
 }
 
 /** Compute school standings from player data.
- *  Schools ranked by total profit across all their players.
- *  Only schools with at least 1 player who has played a race are shown. */
+ *  Schools ranked by total POSITIVE profit from winning players only.
+ *  Winning helps your school. Losing doesn't hurt it — you just don't contribute.
+ *  This prevents sabotage: creating accounts to lose on purpose has no effect. */
 function computeSchoolStandings(players: LeaderboardEntry[]): SchoolStanding[] {
   const schoolMap = new Map<string, LeaderboardEntry[]>();
 
@@ -70,9 +71,9 @@ function computeSchoolStandings(players: LeaderboardEntry[]): SchoolStanding[] {
 
   const standings: SchoolStanding[] = [];
   for (const [school, schoolPlayers] of schoolMap) {
-    // Only include schools where at least 1 player has played
-    const activePlayers = schoolPlayers.filter(p => p.races_played > 0);
-    const totalProfit = schoolPlayers.reduce((s, p) => s + p.total_profit, 0);
+    // Only count POSITIVE profit — losses don't drag the school down
+    const totalProfit = schoolPlayers.reduce((s, p) => s + Math.max(0, p.total_profit), 0);
+    const winnersCount = schoolPlayers.filter(p => p.total_profit > 0).length;
     const avgBankroll = schoolPlayers.reduce((s, p) => s + p.bankroll, 0) / schoolPlayers.length;
     const topPlayer = [...schoolPlayers].sort((a, b) => b.total_profit - a.total_profit)[0];
     standings.push({
@@ -84,7 +85,7 @@ function computeSchoolStandings(players: LeaderboardEntry[]): SchoolStanding[] {
     });
   }
 
-  // Sort by total profit descending
+  // Sort by total positive profit descending
   return standings.sort((a, b) => b.totalProfit - a.totalProfit);
 }
 
