@@ -673,12 +673,22 @@ function AuthModal({ onSubmit }: { onSubmit: (user: UserProfile) => void }) {
     inputRef.current?.focus();
   }, [mode]);
 
+  const [attempts, setAttempts] = useState(0);
+  const [lockedUntil, setLockedUntil] = useState(0);
+
   // Reset error when switching modes or changing fields
   useEffect(() => { setError(""); }, [mode, name, school, pin, confirmPin]);
 
+  // Name validation — letters, numbers, spaces only, max 15 chars
+  const cleanName = name.replace(/[^a-zA-Z0-9 ]/g, "").slice(0, 15);
+  const BLOCKED_WORDS = ["fuck", "shit", "ass", "dick", "bitch", "nigger", "faggot", "cunt", "whore", "slut", "penis", "vagina", "nazi", "kill"];
+  const nameHasBadWord = BLOCKED_WORDS.some(w => cleanName.toLowerCase().includes(w));
+  const nameValid = cleanName.trim().length >= 2 && cleanName.trim().length <= 15 && !nameHasBadWord;
+
   const pinValid = pin.length === 4 && /^\d{4}$/.test(pin);
-  const isNewValid = name.trim().length >= 2 && name.trim().length <= 20 && school !== "" && pinValid && pin === confirmPin;
-  const isReturnValid = name.trim().length >= 2 && school !== "" && pinValid;
+  const isLocked = Date.now() < lockedUntil;
+  const isNewValid = nameValid && school !== "" && pinValid && pin === confirmPin;
+  const isReturnValid = cleanName.trim().length >= 2 && school !== "" && pinValid && !isLocked;
   const isValid = mode === "new" ? isNewValid : isReturnValid;
 
   const handlePinInput = (value: string, setter: (v: string) => void) => {
@@ -707,9 +717,23 @@ function AuthModal({ onSubmit }: { onSubmit: (user: UserProfile) => void }) {
         newUser.id = id;
         onSubmit(newUser);
       } else {
+        // Rate limiting — lock after 5 failed attempts for 30 seconds
+        if (isLocked) {
+          setError("Too many attempts. Please wait 30 seconds.");
+          setLoading(false);
+          return;
+        }
+
         const { player, error: loginError } = await loginPlayer(name.trim(), school, pin);
         if (!player) {
-          setError(loginError ?? "Login failed. Please try again.");
+          const newAttempts = attempts + 1;
+          setAttempts(newAttempts);
+          if (newAttempts >= 5) {
+            setLockedUntil(Date.now() + 30000);
+            setError("Too many failed attempts. Locked for 30 seconds.");
+          } else {
+            setError(loginError ?? `Login failed. ${5 - newAttempts} attempts remaining.`);
+          }
           setLoading(false);
           return;
         }
@@ -795,23 +819,26 @@ function AuthModal({ onSubmit }: { onSubmit: (user: UserProfile) => void }) {
           <div className="space-y-3">
             <div>
               <label className="text-[11px] font-semibold uppercase tracking-wider block mb-1.5" style={{ color: TEXT_SEC }}>
-                Display Name
+                Display Name <span className="font-normal normal-case" style={{ color: TEXT_MUTED }}>(letters & numbers only)</span>
               </label>
               <input
                 ref={inputRef}
                 type="text"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => setName(e.target.value.replace(/[^a-zA-Z0-9 ]/g, "").slice(0, 15))}
                 onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
                 placeholder="Your name..."
-                maxLength={20}
+                maxLength={15}
                 className="w-full px-4 py-3 rounded-xl text-sm font-medium outline-none transition-all"
                 style={{
                   background: BG_DARK,
-                  border: `2px solid ${name.trim().length >= 2 ? `${GOLD}60` : BORDER}`,
+                  border: `2px solid ${nameHasBadWord ? RED : nameValid ? `${GOLD}60` : BORDER}`,
                   color: "#fff",
                 }}
               />
+              {nameHasBadWord && (
+                <p className="text-[10px] mt-1" style={{ color: RED }}>Please choose an appropriate name</p>
+              )}
             </div>
 
             <div>
@@ -1817,13 +1844,20 @@ export default function LiveRacingPage() {
   const lastEpochRef = useRef(0);
   const resultsProcessedRef = useRef(false);
 
-  /* ---- Initialize ---- */
+  /* ---- Initialize — load user and validate against server ---- */
   useEffect(() => {
     setMounted(true);
     const saved = loadUser();
     if (saved) {
+      // Validate bankroll: cap at reasonable max to prevent localStorage tampering
+      const maxBankroll = Math.max(1000, saved.startingBankroll + (saved.racesPlayed * 500));
+      if (saved.bankroll > maxBankroll) {
+        saved.bankroll = 1000;
+        saved.totalProfit = 0;
+        saved.biggestWin = 0;
+        saveUser(saved);
+      }
       setUser(saved);
-      // Sync existing user to Supabase on load
       syncPlayer({
         id: saved.id,
         name: saved.name,

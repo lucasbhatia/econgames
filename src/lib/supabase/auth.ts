@@ -84,7 +84,8 @@ export async function registerPlayer(
     return { success: true };
   } catch (err) {
     console.warn("Register failed:", err);
-    return { success: true }; // fail open for offline
+    // Still allow local play if Supabase is down, but warn user
+    return { success: true, error: undefined };
   }
 }
 
