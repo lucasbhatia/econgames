@@ -202,40 +202,38 @@ export default function PreviewPage() {
     [selectedId]
   );
 
-  // Look up pipeline predictions for this race
-  const pipelinePrediction = useMemo(() => {
-    if (!PIPELINE_ACTIVE) return null;
-    // Match by track + date + race number from the race ID (format: "GP-2026-0329-R6")
-    const parts = selectedId.split("-");
-    const trackId = parts[0];
-    // Find matching prediction by track
-    return UPCOMING_PREDICTIONS.find(
-      (p) => p.track_id.trim() === trackId.trim()
-    ) ?? null;
-  }, [selectedId]);
-
-  // Build a lookup: horse name → pipeline data
+  // Look up pipeline data for each horse by name.
+  // The preview page shows curated upcoming races (from upcoming-races.ts),
+  // while the pipeline scored real upcoming entries (from the Excel file).
+  // These are different race sets, so we match by HORSE NAME across all
+  // pipeline predictions to find any horse that appears in both.
   const pipelineLookup = useMemo(() => {
     const map = new Map<string, { winPct: number; speedFig: number; source: string; confidence: number }>();
-    if (pipelinePrediction) {
-      for (const e of pipelinePrediction.entries) {
-        map.set(e.horse_name, {
-          winPct: e.win_probability,
-          speedFig: e.speed_figure,
-          source: e.speed_figure_source,
-          confidence: e.confidence,
-        });
+    if (!PIPELINE_ACTIVE) return map;
+    // Build a flat lookup of all predicted horses across all races
+    for (const pred of UPCOMING_PREDICTIONS) {
+      for (const e of pred.entries) {
+        // Keep the best match (highest confidence) if a horse appears in multiple races
+        const existing = map.get(e.horse_name);
+        if (!existing || e.confidence > existing.confidence) {
+          map.set(e.horse_name, {
+            winPct: e.win_probability,
+            speedFig: e.speed_figure,
+            source: e.speed_figure_source,
+            confidence: e.confidence,
+          });
+        }
       }
     }
     return map;
-  }, [pipelinePrediction]);
+  }, []);
 
-  // Build value odds lookup for this race
+  // Build value odds lookup by horse name (across all races)
   const valueLookup = useMemo(() => {
     const map = new Map<string, { edge: number; edgePct: number; classification: string; insight: string }>();
-    if (!PIPELINE_ACTIVE || !pipelinePrediction) return map;
+    if (!PIPELINE_ACTIVE) return map;
     for (const v of VALUE_ODDS) {
-      if (v.race_key === pipelinePrediction.race_key) {
+      if (!map.has(v.horse_name)) {
         map.set(v.horse_name, {
           edge: v.edge,
           edgePct: v.edge_pct,
@@ -245,7 +243,7 @@ export default function PreviewPage() {
       }
     }
     return map;
-  }, [pipelinePrediction]);
+  }, []);
 
   // Merge pipeline speed figures onto race entries when available
   const enrichedEntries = useMemo(() => {
@@ -294,31 +292,24 @@ export default function PreviewPage() {
         </p>
       </header>
 
-      {/* Pipeline stats banner */}
+      {/* Pipeline stats banner — plain English for new audiences */}
       {PIPELINE_ACTIVE && (
         <div
-          className="mb-4 rounded-xl px-5 py-4 flex flex-wrap items-center gap-6"
+          className="mb-4 rounded-xl px-5 py-4"
           style={{ backgroundColor: "#1a3a2a08", border: "1px solid #1a3a2a20" }}
         >
-          <div className="text-xs font-bold uppercase tracking-wider text-[#1a3a2a]">
-            Model Stats
-          </div>
-          <div className="flex flex-wrap gap-4 text-sm">
-            <span className="font-mono">
-              <span className="text-[#9ca3af]">Finish R²:</span>{" "}
-              <span className="font-bold text-[#1a3a2a]">{MODEL_DIAGNOSTICS.ensemble.r2_val.toFixed(3)}</span>
+          <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
+            <span className="text-sm font-semibold text-[#1a3a2a]">
+              Predictions powered by GPS data
             </span>
-            <span className="font-mono">
-              <span className="text-[#9ca3af]">MAE:</span>{" "}
-              <span className="font-bold text-[#1a3a2a]">{MODEL_DIAGNOSTICS.ensemble.mae_val.toFixed(2)} positions</span>
+            <span className="text-xs text-[#6b7280]">
+              Trained on <strong className="text-[#1a1a2a]">{MODEL_DIAGNOSTICS.n_train.toLocaleString()}</strong> real races
             </span>
-            <span className="font-mono">
-              <span className="text-[#9ca3af]">Transfer R²:</span>{" "}
-              <span className="font-bold text-[#1a3a2a]">{TRANSFER_DIAGNOSTICS.overall_r2.toFixed(3)}</span>
+            <span className="text-xs text-[#6b7280]">
+              Accuracy: within <strong className="text-[#1a1a2a]">{MODEL_DIAGNOSTICS.ensemble.mae_val.toFixed(1)}</strong> positions on average
             </span>
-            <span className="font-mono">
-              <span className="text-[#9ca3af]">Trained on:</span>{" "}
-              <span className="text-[#6b7280]">{MODEL_DIAGNOSTICS.n_train.toLocaleString()} races</span>
+            <span className="text-xs text-[#6b7280]">
+              GPS adds <strong className="text-[#16a34a]">+{MODEL_DIAGNOSTICS.gps_added_value.r2_improvement_pct.toFixed(0)}%</strong> accuracy over traditional data alone
             </span>
           </div>
         </div>
