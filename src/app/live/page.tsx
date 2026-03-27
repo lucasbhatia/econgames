@@ -1315,10 +1315,9 @@ function PostParadeOverlay({ race, timer }: { race: RaceCard; timer: number }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className="rounded-2xl overflow-hidden"
-      style={{ background: BG_DARK, border: `1px solid ${BORDER}` }}
+      style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}
     >
       <div className="px-6 py-8 text-center space-y-4">
-        {/* Gate loading animation */}
         <motion.div
           animate={{ scale: [1, 1.02, 1] }}
           transition={{ repeat: Infinity, duration: 2 }}
@@ -1327,7 +1326,7 @@ function PostParadeOverlay({ race, timer }: { race: RaceCard; timer: number }) {
           <div className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: GOLD }}>
             Post Parade
           </div>
-          <h2 className="text-2xl font-bold text-white">
+          <h2 className="text-2xl font-bold" style={{ color: TEXT }}>
             {race.name}
           </h2>
           <div className="text-sm" style={{ color: TEXT_SEC }}>
@@ -1335,7 +1334,6 @@ function PostParadeOverlay({ race, timer }: { race: RaceCard; timer: number }) {
           </div>
         </motion.div>
 
-        {/* Horses loading into gates */}
         <div className="grid grid-cols-2 gap-2 max-w-md mx-auto mt-6">
           {race.horses.map((horse, i) => (
             <motion.div
@@ -1344,7 +1342,7 @@ function PostParadeOverlay({ race, timer }: { race: RaceCard; timer: number }) {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.15 }}
               className="flex items-center gap-2 px-3 py-2 rounded-lg"
-              style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}
+              style={{ background: BG_WHITE, border: `1px solid ${BORDER}` }}
             >
               <div
                 className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
@@ -1352,7 +1350,7 @@ function PostParadeOverlay({ race, timer }: { race: RaceCard; timer: number }) {
               >
                 {i + 1}
               </div>
-              <span className="text-xs font-medium text-white truncate">
+              <span className="text-xs font-medium truncate" style={{ color: TEXT }}>
                 {horse.name}
               </span>
               <div className="ml-auto w-1.5 h-1.5 rounded-full animate-pulse-live" style={{ background: GOLD }} />
@@ -1360,12 +1358,11 @@ function PostParadeOverlay({ race, timer }: { race: RaceCard; timer: number }) {
           ))}
         </div>
 
-        {/* Countdown */}
         <motion.div className="mt-6">
           <motion.div
             key={timer}
             className="text-5xl font-mono font-bold animate-countdown-tick"
-            style={{ color: GOLD, textShadow: `0 0 30px ${GOLD}40` }}
+            style={{ color: GOLD }}
           >
             {timer}
           </motion.div>
@@ -2448,99 +2445,95 @@ export default function LiveRacingPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 pb-8">
             {/* ──── Left: Unified Race Card (Odds + Bet / Results) ──── */}
             <div className="lg:col-span-5 space-y-4">
-              {/* BETTING PHASE: Combined odds + bet controls */}
+              {/* BETTING PHASE: One unified light panel — odds table + bet controls */}
               {phase === "betting" && user && (
-                <div className="rounded-2xl overflow-hidden" style={{ border: `1.5px solid ${BORDER}` }}>
-                  {/* Odds board header */}
-                  <div className="p-4 pb-0" style={{ background: BG_DARK }}>
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-white">
-                        Race Card & Betting
-                      </h3>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)" }}>
-                        {race.horses.length} runners · {race.distance}F {race.surface}
+                <div className="p-4 rounded-2xl" style={{ background: BG_WHITE, border: `1.5px solid ${BORDER}` }}>
+                  {/* Header */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Ticket className="w-4 h-4" style={{ color: GOLD }} />
+                      <h3 className="text-sm font-bold" style={{ color: TEXT }}>Race Card</h3>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] px-2 py-0.5 rounded" style={{ background: BG_CARD, color: TEXT_SEC, border: `1px solid ${BORDER}` }}>
+                        {race.horses.length} runners
                       </span>
-                    </div>
-
-                    {/* Column headers */}
-                    <div className="flex items-center gap-2 px-2 pb-1.5 mb-1" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-                      <span className="w-5 text-[8px] font-bold text-center" style={{ color: "rgba(255,255,255,0.3)" }}>#</span>
-                      <span className="flex-1 text-[8px] font-bold uppercase" style={{ color: "rgba(255,255,255,0.3)" }}>Horse</span>
-                      <span className="w-12 text-[8px] font-bold text-center uppercase" style={{ color: "rgba(255,255,255,0.3)" }}>Win</span>
-                      <span className="w-12 text-[8px] font-bold text-center uppercase" style={{ color: "rgba(255,255,255,0.3)" }}>Place</span>
-                      <span className="w-12 text-[8px] font-bold text-center uppercase" style={{ color: "rgba(255,255,255,0.3)" }}>Show</span>
-                    </div>
-
-                    {/* Horse rows */}
-                    <div className="space-y-0.5">
-                      {race.horses.map((horse, i) => {
-                        const odds = race.odds[horse.name];
-                        const imgUrl = getHorseImage(horse.name);
-                        const slug = getHorseSlug(horse.name);
-                        return (
-                          <div
-                            key={horse.name}
-                            className="flex items-center gap-2 px-2 py-2 rounded-lg transition-all hover:bg-white/5"
-                            style={{ background: i % 2 === 0 ? "rgba(255,255,255,0.03)" : "transparent" }}
-                          >
-                            <div className="w-5 shrink-0">
-                              <div className="w-5 h-5 rounded-full overflow-hidden" style={{ border: `1.5px solid ${horse.color}` }}>
-                                {imgUrl ? (
-                                  <Image src={imgUrl} alt={horse.name} width={20} height={20} className="w-full h-full object-cover" />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center text-[8px] font-bold text-white" style={{ background: horse.color }}>
-                                    {i + 1}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <Link href={`/profiles/${slug}`} className="text-[11px] font-bold truncate block hover:underline text-white">
-                                {horse.name}
-                              </Link>
-                              <div className="text-[9px]" style={{ color: horse.color }}>{horse.runningStyle}</div>
-                            </div>
-                            <div className="w-12 text-center">
-                              <div className="text-[11px] font-bold font-mono" style={{ color: GOLD }}>{formatOddsDisplay(odds?.win ?? 2)}</div>
-                            </div>
-                            <div className="w-12 text-center">
-                              <div className="text-[11px] font-bold font-mono" style={{ color: "rgba(255,255,255,0.5)" }}>{formatOddsDisplay(odds?.place ?? 1.5)}</div>
-                            </div>
-                            <div className="w-12 text-center">
-                              <div className="text-[11px] font-bold font-mono" style={{ color: "rgba(255,255,255,0.5)" }}>{formatOddsDisplay(odds?.show ?? 1.2)}</div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Pace projection */}
-                    <div className="mt-2 mb-3 p-2.5 rounded-lg" style={{ background: "rgba(184,148,31,0.08)", border: "1px solid rgba(184,148,31,0.15)" }}>
-                      <div className="text-[10px]" style={{ color: "rgba(255,255,255,0.6)" }}>
-                        {(() => {
-                          const fr = race.horses.filter((h) => h.runningStyle === "Front Runner").length;
-                          const cl = race.horses.filter((h) => h.runningStyle === "Closer").length;
-                          const st = race.horses.filter((h) => h.runningStyle === "Stalker").length;
-                          if (fr >= 3) return `Hot pace — ${fr} front runners will battle. Edge: closers.`;
-                          if (fr === 0) return "Slow pace likely — no front runner. Tactical speed wins.";
-                          if (fr === 1 && cl >= 3) return `Lone speed — 1 front runner dictates. ${cl} closers need fast pace.`;
-                          return `Honest pace — ${fr} speed, ${st} stalkers, ${cl} closers.`;
-                        })()}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Bet slip controls (light section below) */}
-                  <div className="p-4" style={{ background: BG_WHITE, borderTop: `1px solid ${BORDER}` }}>
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <Ticket className="w-4 h-4" style={{ color: GOLD }} />
-                        <span className="text-sm font-bold" style={{ color: TEXT }}>Place Bets</span>
-                      </div>
                       <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-lg" style={{ background: `${GOLD}10`, color: GOLD, border: `1px solid ${GOLD}30` }}>
                         ${user.bankroll.toLocaleString()}
                       </span>
                     </div>
+                  </div>
+
+                  {/* Odds table */}
+                  <div className="rounded-xl overflow-hidden mb-4" style={{ border: `1px solid ${BORDER}` }}>
+                    {/* Column headers */}
+                    <div className="flex items-center gap-2 px-3 py-2" style={{ background: BG_CARD, borderBottom: `1px solid ${BORDER}` }}>
+                      <span className="w-7 text-[9px] font-bold text-center" style={{ color: TEXT_MUTED }}>#</span>
+                      <span className="flex-1 text-[9px] font-bold uppercase" style={{ color: TEXT_MUTED }}>Horse</span>
+                      <span className="w-14 text-[9px] font-bold text-center uppercase" style={{ color: TEXT_MUTED }}>Win</span>
+                      <span className="w-14 text-[9px] font-bold text-center uppercase" style={{ color: TEXT_MUTED }}>Place</span>
+                      <span className="w-14 text-[9px] font-bold text-center uppercase" style={{ color: TEXT_MUTED }}>Show</span>
+                    </div>
+
+                    {/* Horse rows */}
+                    {race.horses.map((horse, i) => {
+                      const odds = race.odds[horse.name];
+                      const imgUrl = getHorseImage(horse.name);
+                      const slug = getHorseSlug(horse.name);
+                      return (
+                        <div
+                          key={horse.name}
+                          className="flex items-center gap-2 px-3 py-2 transition-colors hover:bg-[#f3f1ec]"
+                          style={{ background: i % 2 === 0 ? BG_WHITE : BG_CARD, borderBottom: i < race.horses.length - 1 ? `1px solid ${BORDER}` : "none" }}
+                        >
+                          <div className="w-7 shrink-0 flex items-center justify-center">
+                            <div className="w-6 h-6 rounded-full overflow-hidden" style={{ border: `2px solid ${horse.color}` }}>
+                              {imgUrl ? (
+                                <Image src={imgUrl} alt={horse.name} width={24} height={24} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-[9px] font-bold text-white" style={{ background: horse.color }}>
+                                  {i + 1}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <Link href={`/profiles/${slug}`} className="text-[12px] font-bold truncate block hover:underline" style={{ color: TEXT }}>
+                              {horse.name}
+                            </Link>
+                            <div className="text-[10px]" style={{ color: horse.color }}>{horse.runningStyle}</div>
+                          </div>
+                          <div className="w-14 text-center">
+                            <span className="text-[12px] font-bold font-mono" style={{ color: GOLD }}>{formatOddsDisplay(odds?.win ?? 2)}</span>
+                          </div>
+                          <div className="w-14 text-center">
+                            <span className="text-[12px] font-bold font-mono" style={{ color: TEXT_SEC }}>{formatOddsDisplay(odds?.place ?? 1.5)}</span>
+                          </div>
+                          <div className="w-14 text-center">
+                            <span className="text-[12px] font-bold font-mono" style={{ color: TEXT_SEC }}>{formatOddsDisplay(odds?.show ?? 1.2)}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Pace projection */}
+                  <div className="mb-4 p-2.5 rounded-lg" style={{ background: `${GOLD}08`, border: `1px solid ${GOLD}20` }}>
+                    <div className="text-[10px]" style={{ color: TEXT_SEC }}>
+                      {(() => {
+                        const fr = race.horses.filter((h) => h.runningStyle === "Front Runner").length;
+                        const cl = race.horses.filter((h) => h.runningStyle === "Closer").length;
+                        const st = race.horses.filter((h) => h.runningStyle === "Stalker").length;
+                        if (fr >= 3) return `Hot pace — ${fr} front runners will battle. Edge: closers.`;
+                        if (fr === 0) return "Slow pace likely — no front runner. Tactical speed wins.";
+                        if (fr === 1 && cl >= 3) return `Lone speed — 1 front runner dictates. ${cl} closers need fast pace.`;
+                        return `Honest pace — ${fr} speed, ${st} stalkers, ${cl} closers.`;
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Bet controls — seamlessly integrated */}
+                  <div className="pt-3" style={{ borderTop: `1px solid ${BORDER}` }}>
                     <BetSlipBuilder
                       race={race}
                       bets={bets}
@@ -2575,56 +2568,54 @@ export default function LiveRacingPage() {
                 </div>
               )}
 
-              {/* RACING: live positions + bets */}
+              {/* RACING: live positions + bets — all light */}
               {phase === "racing" && (
-                <div className="rounded-2xl overflow-hidden" style={{ border: `1.5px solid ${BORDER}` }}>
-                  {/* Live positions header */}
-                  <div className="p-4 pb-3" style={{ background: BG_DARK }}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <motion.div animate={{ scale: [1, 1.15, 1] }} transition={{ repeat: Infinity, duration: 0.8 }}>
-                        <Zap className="w-4 h-4" style={{ color: GOLD }} />
-                      </motion.div>
-                      <span className="text-xs font-bold uppercase tracking-wider text-white">Live Positions</span>
-                      <span className="ml-auto text-[10px] font-mono" style={{ color: GOLD }}>
-                        {replayData ? `${(Math.min(1, (RACING_DURATION - timer) / RACING_DURATION) * race.distance).toFixed(1)}f / ${race.distance}f` : ""}
-                      </span>
-                    </div>
-                    {/* Mini position bars for each horse */}
-                    <div className="space-y-1">
-                      {replayData && (() => {
-                        const prog = Math.min(1, (RACING_DURATION - timer) / RACING_DURATION);
-                        // Sort horses by approximate position
-                        const horsesWithPos = race.horses.map((h, i) => {
-                          const posOffset = (i + 1) * 0.03;
-                          const horseX = Math.max(0, Math.min(1, prog - posOffset));
-                          return { name: h.name, color: h.color, x: horseX, idx: i };
-                        }).sort((a, b) => b.x - a.x);
-
-                        return horsesWithPos.map((h, rank) => (
-                          <div key={h.name} className="flex items-center gap-2">
-                            <span className="text-[9px] font-bold w-4 text-right" style={{ color: rank < 3 ? GOLD : "rgba(255,255,255,0.3)" }}>
-                              {rank + 1}
-                            </span>
-                            <div className="w-3 h-3 rounded-full shrink-0" style={{ background: h.color }} />
-                            <span className="text-[10px] font-medium text-white/80 w-24 truncate">{h.name}</span>
-                            <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-                              <motion.div
-                                className="h-full rounded-full"
-                                style={{
-                                  background: rank === 0 ? GOLD : h.color,
-                                  width: `${h.x * 100}%`,
-                                  transition: "width 0.3s ease",
-                                }}
-                              />
-                            </div>
-                          </div>
-                        ));
-                      })()}
-                    </div>
+                <div className="p-4 rounded-2xl" style={{ background: BG_WHITE, border: `1.5px solid ${BORDER}` }}>
+                  {/* Live positions */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <motion.div animate={{ scale: [1, 1.15, 1] }} transition={{ repeat: Infinity, duration: 0.8 }}>
+                      <Zap className="w-4 h-4" style={{ color: GOLD }} />
+                    </motion.div>
+                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: TEXT }}>Live Positions</span>
+                    <span className="ml-auto text-[10px] font-mono font-bold" style={{ color: GOLD }}>
+                      {replayData ? `${(Math.min(1, (RACING_DURATION - timer) / RACING_DURATION) * race.distance).toFixed(1)}f / ${race.distance}f` : ""}
+                    </span>
                   </div>
 
-                  {/* Your bets section */}
-                  <div className="p-4 pt-3" style={{ background: BG_WHITE, borderTop: `1px solid ${BORDER}` }}>
+                  {/* Position bars */}
+                  <div className="space-y-1.5 mb-4">
+                    {replayData && (() => {
+                      const prog = Math.min(1, (RACING_DURATION - timer) / RACING_DURATION);
+                      const horsesWithPos = race.horses.map((h, i) => {
+                        const posOffset = (i + 1) * 0.03;
+                        const horseX = Math.max(0, Math.min(1, prog - posOffset));
+                        return { name: h.name, color: h.color, x: horseX, idx: i };
+                      }).sort((a, b) => b.x - a.x);
+
+                      return horsesWithPos.map((h, rank) => (
+                        <div key={h.name} className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold w-4 text-right" style={{ color: rank < 3 ? GOLD : TEXT_MUTED }}>
+                            {rank + 1}
+                          </span>
+                          <div className="w-3.5 h-3.5 rounded-full shrink-0" style={{ background: h.color }} />
+                          <span className="text-[11px] font-medium w-28 truncate" style={{ color: TEXT }}>{h.name}</span>
+                          <div className="flex-1 h-2.5 rounded-full overflow-hidden" style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}>
+                            <motion.div
+                              className="h-full rounded-full"
+                              style={{
+                                background: rank === 0 ? GOLD : h.color,
+                                width: `${h.x * 100}%`,
+                                transition: "width 0.3s ease",
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+
+                  {/* Your bets */}
+                  <div className="pt-3" style={{ borderTop: `1px solid ${BORDER}` }}>
                     <div className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: TEXT_SEC }}>Your Bets</div>
                     {bets.length > 0 ? (
                       <div className="space-y-1">
@@ -2688,31 +2679,28 @@ export default function LiveRacingPage() {
                   />
                 )}
 
-                {/* During betting: show a preview/placeholder track */}
+                {/* During betting: show a clean preview */}
                 {phase === "betting" && (
-                  <div className="p-6 text-center" style={{ background: BG_DARK, minHeight: 300 }}>
+                  <div className="p-6 text-center" style={{ background: BG_CARD, minHeight: 280 }}>
                     <div className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: GOLD }}>
-                      Track Preview
+                      {race.track.name}
                     </div>
-                    <p className="text-sm text-white/60 mb-4">
-                      {race.track.name} · {race.distance}F {race.surface}
+                    <p className="text-sm mb-4" style={{ color: TEXT_SEC }}>
+                      {race.distance}F {race.surface} · {race.condition}
                     </p>
-                    <div className="flex items-center justify-center gap-1 mb-6">
+                    <div className="flex items-center justify-center gap-1.5 mb-6">
                       <Flag className="w-4 h-4" style={{ color: GOLD }} />
-                      <span className="text-xs text-white/40">Race starts in {formatTimer(timer)}</span>
+                      <span className="text-sm font-mono font-bold" style={{ color: TEXT }}>Race starts in {formatTimer(timer)}</span>
                     </div>
-                    {/* Mini horse lineup */}
-                    <div className="space-y-1.5 max-w-xs mx-auto">
-                      {race.horses.slice(0, 6).map((horse, i) => (
-                        <div key={horse.name} className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: "rgba(255,255,255,0.04)" }}>
-                          <div className="w-4 h-4 rounded-full" style={{ background: horse.color }} />
-                          <span className="text-[11px] text-white/70 flex-1 truncate">{horse.name}</span>
-                          <span className="text-[10px] font-mono" style={{ color: GOLD }}>{formatOddsDisplay(race.odds[horse.name]?.win ?? 2)}</span>
+                    {/* Horse lineup */}
+                    <div className="space-y-1 max-w-sm mx-auto">
+                      {race.horses.map((horse, i) => (
+                        <div key={horse.name} className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: BG_WHITE, border: `1px solid ${BORDER}` }}>
+                          <div className="w-4 h-4 rounded-full shrink-0" style={{ background: horse.color }} />
+                          <span className="text-[11px] font-medium flex-1 truncate" style={{ color: TEXT }}>{horse.name}</span>
+                          <span className="text-[10px] font-mono font-bold" style={{ color: GOLD }}>{formatOddsDisplay(race.odds[horse.name]?.win ?? 2)}</span>
                         </div>
                       ))}
-                      {race.horses.length > 6 && (
-                        <p className="text-[10px] text-white/30">+{race.horses.length - 6} more</p>
-                      )}
                     </div>
                   </div>
                 )}
