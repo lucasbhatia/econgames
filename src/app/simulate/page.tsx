@@ -92,6 +92,8 @@ function profileToSim(
   const stdev = Math.sqrt(variance);
   const consistency = stdev < 1.5 ? 0.3 : stdev < 2.5 ? 0.5 : 0.8;
 
+  const recentFormAvg = finishes.length > 0 ? mean : undefined;
+
   return {
     name: profile.name,
     color: profile.color,
@@ -104,6 +106,11 @@ function profileToSim(
     consistency,
     postPosition,
     isCustom: false,
+    bestDistance: profile.bestDistance,
+    bestSurface: profile.bestSurface,
+    recentFormAvg,
+    careerWins: profile.wins,
+    age: profile.age,
   };
 }
 
@@ -666,10 +673,10 @@ function SimulatePageInner() {
                 {[
                   "Each horse has a GPS speed curve — their typical speed at every furlong of a race, measured from real GPS tracking data.",
                   "For each simulated race, we add realistic randomness to every horse's speed. A horse averaging 17.2 ft/s might run 16.8 or 17.6 in any given race — just like real life.",
-                  "Running style matters: Front Runners get a speed boost early (+0.3 ft/s) but tire late (-0.4 ft/s). Closers are slower early (-0.2 ft/s) but kick hard in the stretch (+0.5 ft/s). Stalkers are neutral.",
-                  "Track bias adjusts for real-world rail advantages — inside post positions can get a slight edge (or disadvantage).",
+                  "Running style matters: Front Runners get a speed boost early but tire late. Closers are slower early but kick hard in the stretch. Stalkers are neutral.",
+                  "Traditional handicapping factors are layered on top: distance suitability (is this horse's best distance?), surface preference (dirt vs turf specialist), recent form cycle (improving or declining?), and track bias.",
                   "We run this 500+ times instantly as you add horses. The win percentage = how often each horse finished first. Fair odds = the inverse of win probability.",
-                  "This is the same approach Wall Street uses for risk modeling — called Monte Carlo simulation. Instead of predicting one outcome, we model hundreds of possible outcomes and measure the probabilities.",
+                  "This combines GPS analytics with traditional racing wisdom — the same approach Wall Street uses for risk modeling (Monte Carlo simulation), but applied to horse racing.",
                 ].map((text, i) => (
                   <li key={i} className="flex items-start gap-3">
                     <span
@@ -891,6 +898,9 @@ function SimulatePageInner() {
                           <th className="hidden pb-2 pr-2 text-right font-semibold md:table-cell">
                             $2 Payout
                           </th>
+                          <th className="hidden pb-2 pr-2 text-center font-semibold xl:table-cell">
+                            Factors
+                          </th>
                           <th className="pb-2 text-center font-semibold">
                             &nbsp;
                           </th>
@@ -1073,6 +1083,43 @@ function SimulatePageInner() {
                                 {h.winPct > 0
                                   ? `$${(2 * (100 / h.winPct)).toFixed(2)}`
                                   : "\u2014"}
+                              </td>
+                              {/* Traditional Factors indicators */}
+                              <td className="hidden py-2.5 pr-2 xl:table-cell">
+                                <div className="flex items-center justify-center gap-1">
+                                  {simH && (() => {
+                                    const factors: { label: string; good: boolean }[] = [];
+                                    // Distance fit
+                                    if (simH.bestDistance) {
+                                      const best = parseFloat(simH.bestDistance.replace("F", ""));
+                                      const diff = Math.abs(best - distance);
+                                      if (diff <= 1) factors.push({ label: "Dist", good: true });
+                                      else if (diff >= 2) factors.push({ label: "Dist", good: false });
+                                    }
+                                    // Surface fit
+                                    if (simH.bestSurface) {
+                                      if (simH.bestSurface === surface || simH.bestSurface === "Both") {
+                                        factors.push({ label: "Surf", good: true });
+                                      } else {
+                                        factors.push({ label: "Surf", good: false });
+                                      }
+                                    }
+                                    // Form
+                                    if (simH.recentFormAvg !== undefined) {
+                                      if (simH.recentFormAvg <= 3) factors.push({ label: "Form", good: true });
+                                      else if (simH.recentFormAvg >= 5) factors.push({ label: "Form", good: false });
+                                    }
+                                    return factors.map((f, fi) => (
+                                      <span key={fi} className="text-[8px] font-bold px-1 py-0.5 rounded"
+                                        style={{
+                                          background: f.good ? "#16a34a15" : "#dc262615",
+                                          color: f.good ? "#16a34a" : "#dc2626",
+                                        }}>
+                                        {f.good ? "✓" : "✗"}{f.label}
+                                      </span>
+                                    ));
+                                  })()}
+                                </div>
                               </td>
                               {/* Remove button */}
                               <td className="py-2.5 text-center">

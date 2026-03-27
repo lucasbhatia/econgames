@@ -235,6 +235,9 @@ function profileToSim(profile: HorseProfile, postPosition: number): SimHorse {
   const stdev = Math.sqrt(variance);
   const consistency = stdev < 1.5 ? 0.3 : stdev < 2.5 ? 0.5 : 0.8;
 
+  // Calculate recent form average for traditional factor
+  const recentFormAvg = finishes.length > 0 ? mean : undefined;
+
   return {
     name: profile.name,
     color: RACE_COLORS[postPosition % RACE_COLORS.length],
@@ -247,6 +250,12 @@ function profileToSim(profile: HorseProfile, postPosition: number): SimHorse {
     consistency,
     postPosition,
     isCustom: false,
+    // Traditional handicapping factors
+    bestDistance: profile.bestDistance,
+    bestSurface: profile.bestSurface,
+    recentFormAvg,
+    careerWins: profile.wins,
+    age: profile.age,
   };
 }
 

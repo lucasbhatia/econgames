@@ -14,6 +14,12 @@ export interface SimHorse {
   consistency: number; // stdev: 0.3=low, 0.5=med, 0.8=high
   postPosition: number;
   isCustom: boolean;
+  // Traditional handicapping factors (optional — used when available)
+  bestDistance?: string;     // e.g. "8F" — preferred distance
+  bestSurface?: string;     // "Dirt" | "Turf" | "Both"
+  recentFormAvg?: number;   // avg finish in last 5 races (lower = better)
+  careerWins?: number;
+  age?: number;
 }
 
 export interface SimConfig {

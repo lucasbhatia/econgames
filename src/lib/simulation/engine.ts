@@ -42,15 +42,43 @@ function simulateOneRace(horses: SimHorse[], distF: number, surface: string, tra
         speed += progress < 0.3 ? -0.2 : progress > 0.7 ? 0.5 : 0;
       }
 
-      // Track bias
-      if (trackBias === "slight_inside" && horse.postPosition <= 3) {
+      // Track bias (scaled by field size)
+      const insideThreshold = Math.max(2, Math.floor(n * 0.3));
+      const outsideThreshold = n - Math.max(2, Math.floor(n * 0.3));
+      if (trackBias === "slight_inside" && horse.postPosition <= insideThreshold) {
         speed += 0.15;
-      } else if (trackBias === "slight_outside" && horse.postPosition > n - 3) {
+      } else if (trackBias === "slight_outside" && horse.postPosition > outsideThreshold) {
         speed += 0.15;
       }
 
-      // Surface modifier
-      if (surface === "Turf") speed -= 0.3;
+      // Surface preference (traditional factor)
+      if (surface === "Turf") {
+        if (horse.bestSurface === "Turf" || horse.bestSurface === "Both") {
+          speed -= 0.1; // slight natural turf slowdown, but horse handles it well
+        } else {
+          speed -= 0.4; // dirt horse on turf = bigger penalty
+        }
+      } else {
+        // Dirt surface
+        if (horse.bestSurface === "Turf") {
+          speed -= 0.2; // turf horse on dirt = mild penalty
+        }
+      }
+
+      // Distance suitability (traditional factor)
+      if (horse.bestDistance) {
+        const bestDist = parseFloat(horse.bestDistance.replace("F", ""));
+        const distDiff = Math.abs(bestDist - distF);
+        if (distDiff >= 3) speed -= 0.3;       // way outside comfort zone
+        else if (distDiff >= 2) speed -= 0.15;  // stretching
+        // within 1F = no penalty (comfortable range)
+      }
+
+      // Recent form factor (traditional: improving vs declining)
+      if (horse.recentFormAvg !== undefined) {
+        if (horse.recentFormAvg <= 2.5) speed += 0.15;      // in top form
+        else if (horse.recentFormAvg >= 6) speed -= 0.15;    // poor recent form
+      }
 
       // Clamp to reasonable range
       speed = Math.max(12, Math.min(21, speed));
