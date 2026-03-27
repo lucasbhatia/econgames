@@ -2526,6 +2526,35 @@ export default function LiveRacingPage() {
                   </div>
                 )}
 
+                {/* Your race history — compact P&L per race */}
+                {user && user.history.length > 0 && (
+                  <div className="p-3 rounded-2xl" style={{ background: BG_WHITE, border: `1.5px solid ${BORDER}` }}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Trophy className="w-3.5 h-3.5" style={{ color: GOLD }} />
+                      <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: TEXT_SEC }}>
+                        Your Race History
+                      </span>
+                      <span className="ml-auto text-[9px] font-mono" style={{ color: TEXT_MUTED }}>
+                        {user.history.filter(h => h.profit > 0).length}W-{user.history.filter(h => h.profit < 0).length}L
+                      </span>
+                    </div>
+                    <div className="flex gap-1 flex-wrap">
+                      {user.history.slice(-12).map((h, i) => (
+                        <div
+                          key={i}
+                          className="rounded px-1.5 py-0.5 text-[9px] font-mono font-bold"
+                          style={{
+                            background: h.profit > 0 ? `${GREEN}12` : h.profit < 0 ? `${RED}10` : `${TEXT_MUTED}10`,
+                            color: h.profit > 0 ? GREEN : h.profit < 0 ? RED : TEXT_MUTED,
+                          }}
+                        >
+                          {h.profit > 0 ? `+${h.profit}` : h.profit < 0 ? `${h.profit}` : "0"}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Leaderboard — always visible, most important */}
                 <div className="p-3 rounded-2xl" style={{ background: BG_WHITE, border: `1.5px solid ${BORDER}` }}>
                   <SharedLeaderboard
