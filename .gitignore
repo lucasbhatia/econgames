@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ETL pipeline output (regenerated from source data)
+src/lib/data/processed/

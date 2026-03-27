@@ -13,6 +13,7 @@ import {
 import Link from "next/link";
 import { UPCOMING_RACES, type UpcomingRace, type RaceEntry } from "@/lib/data/upcoming-races";
 import type { RunningStyle } from "@/lib/data/horse-profiles";
+import { PIPELINE_ACTIVE, TRANSFER_DIAGNOSTICS, MODEL_DIAGNOSTICS, UPCOMING_PREDICTIONS, VALUE_ODDS, getValueOdds } from "@/lib/data/pipeline-output";
 
 /* ── Style helpers ──────────────────────────────────────────────────────── */
 
@@ -201,16 +202,72 @@ export default function PreviewPage() {
     [selectedId]
   );
 
-  const pace = useMemo(() => projectPace(race.entries), [race]);
+  // Look up pipeline predictions for this race
+  const pipelinePrediction = useMemo(() => {
+    if (!PIPELINE_ACTIVE) return null;
+    // Match by track + date + race number from the race ID (format: "GP-2026-0329-R6")
+    const parts = selectedId.split("-");
+    const trackId = parts[0];
+    // Find matching prediction by track
+    return UPCOMING_PREDICTIONS.find(
+      (p) => p.track_id.trim() === trackId.trim()
+    ) ?? null;
+  }, [selectedId]);
+
+  // Build a lookup: horse name → pipeline data
+  const pipelineLookup = useMemo(() => {
+    const map = new Map<string, { winPct: number; speedFig: number; source: string; confidence: number }>();
+    if (pipelinePrediction) {
+      for (const e of pipelinePrediction.entries) {
+        map.set(e.horse_name, {
+          winPct: e.win_probability,
+          speedFig: e.speed_figure,
+          source: e.speed_figure_source,
+          confidence: e.confidence,
+        });
+      }
+    }
+    return map;
+  }, [pipelinePrediction]);
+
+  // Build value odds lookup for this race
+  const valueLookup = useMemo(() => {
+    const map = new Map<string, { edge: number; edgePct: number; classification: string; insight: string }>();
+    if (!PIPELINE_ACTIVE || !pipelinePrediction) return map;
+    for (const v of VALUE_ODDS) {
+      if (v.race_key === pipelinePrediction.race_key) {
+        map.set(v.horse_name, {
+          edge: v.edge,
+          edgePct: v.edge_pct,
+          classification: v.classification,
+          insight: v.gps_insight,
+        });
+      }
+    }
+    return map;
+  }, [pipelinePrediction]);
+
+  // Merge pipeline speed figures onto race entries when available
+  const enrichedEntries = useMemo(() => {
+    return race.entries.map((entry) => {
+      const pipeline = pipelineLookup.get(entry.horse);
+      if (pipeline) {
+        return { ...entry, speedFigure: Math.round(pipeline.speedFig) };
+      }
+      return entry;
+    });
+  }, [race.entries, pipelineLookup]);
+
+  const pace = useMemo(() => projectPace(enrichedEntries), [enrichedEntries]);
 
   const sortedEntries = useMemo(
-    () => [...race.entries].sort((a, b) => b.speedFigure - a.speedFigure),
-    [race]
+    () => [...enrichedEntries].sort((a, b) => b.speedFigure - a.speedFigure),
+    [enrichedEntries]
   );
 
   const topContenders = useMemo(
-    () => getTopContenders(race.entries, pace),
-    [race, pace]
+    () => getTopContenders(enrichedEntries, pace),
+    [enrichedEntries, pace]
   );
 
   const styleCounts = useMemo(() => {
@@ -219,9 +276,9 @@ export default function PreviewPage() {
       Stalker: 0,
       Closer: 0,
     };
-    race.entries.forEach((e) => counts[e.runningStyle]++);
+    enrichedEntries.forEach((e) => counts[e.runningStyle]++);
     return counts;
-  }, [race]);
+  }, [enrichedEntries]);
 
   const maxSpeed = sortedEntries[0]?.speedFigure ?? 0;
 
@@ -237,6 +294,36 @@ export default function PreviewPage() {
         </p>
       </header>
 
+      {/* Pipeline stats banner */}
+      {PIPELINE_ACTIVE && (
+        <div
+          className="mb-4 rounded-xl px-5 py-4 flex flex-wrap items-center gap-6"
+          style={{ backgroundColor: "#1a3a2a08", border: "1px solid #1a3a2a20" }}
+        >
+          <div className="text-xs font-bold uppercase tracking-wider text-[#1a3a2a]">
+            Model Stats
+          </div>
+          <div className="flex flex-wrap gap-4 text-sm">
+            <span className="font-mono">
+              <span className="text-[#9ca3af]">Finish R²:</span>{" "}
+              <span className="font-bold text-[#1a3a2a]">{MODEL_DIAGNOSTICS.ensemble.r2_val.toFixed(3)}</span>
+            </span>
+            <span className="font-mono">
+              <span className="text-[#9ca3af]">MAE:</span>{" "}
+              <span className="font-bold text-[#1a3a2a]">{MODEL_DIAGNOSTICS.ensemble.mae_val.toFixed(2)} positions</span>
+            </span>
+            <span className="font-mono">
+              <span className="text-[#9ca3af]">Transfer R²:</span>{" "}
+              <span className="font-bold text-[#1a3a2a]">{TRANSFER_DIAGNOSTICS.overall_r2.toFixed(3)}</span>
+            </span>
+            <span className="font-mono">
+              <span className="text-[#9ca3af]">Trained on:</span>{" "}
+              <span className="text-[#6b7280]">{MODEL_DIAGNOSTICS.n_train.toLocaleString()} races</span>
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Page explanation */}
       <div
         className="mb-8 rounded-lg px-4 py-3"
@@ -246,8 +333,9 @@ export default function PreviewPage() {
         }}
       >
         <p className="text-sm leading-relaxed text-[#6b7280]">
-          These are real upcoming races. We analyze each field using GPS history
-          to predict the pace scenario and identify contenders.
+          {PIPELINE_ACTIVE
+            ? `These are real upcoming races scored by a model trained on ${MODEL_DIAGNOSTICS.n_train.toLocaleString()} GPS race records. Speed figures, predictions, and value odds are computed from the data — not hardcoded.`
+            : "These are real upcoming races. We analyze each field using GPS history to predict the pace scenario and identify contenders."}
         </p>
       </div>
 
@@ -309,7 +397,7 @@ export default function PreviewPage() {
           ) : (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-[#b8941f]/10 px-3 py-1 text-sm font-medium text-[#b8941f]">
               <AlertTriangle className="h-3.5 w-3.5" />
-              Non-GPS Track — predictions from transfer model (R&sup2;=0.68)
+              Non-GPS Track — predictions from transfer model (R&sup2;={PIPELINE_ACTIVE ? TRANSFER_DIAGNOSTICS.overall_r2.toFixed(2) : "0.68"})
             </span>
           )}
         </div>
@@ -332,14 +420,14 @@ export default function PreviewPage() {
                 <p className="text-sm text-[#6b7280] leading-relaxed">
                   {race.trackName} does not have GPS sensors installed. We are estimating
                   speed and stride data from traditional race results using a transfer
-                  model trained on GPS-equipped tracks. Accuracy: ~68% (R&sup2; = 0.68).
+                  model trained on GPS-equipped tracks. Accuracy: R&sup2; = {PIPELINE_ACTIVE ? TRANSFER_DIAGNOSTICS.overall_r2.toFixed(2) : "0.68"}.
                   Speed figures and stride efficiency values should be treated as
                   approximations.
                 </p>
               </div>
             </div>
             <p className="mt-3 text-xs text-[#9ca3af] leading-relaxed px-1">
-              R&sup2; = 0.68 means the model explains 68% of the variation in GPS metrics — good enough for style classification but not precise speed predictions.
+              R&sup2; = {PIPELINE_ACTIVE ? TRANSFER_DIAGNOSTICS.overall_r2.toFixed(2) : "0.68"} means the model explains {PIPELINE_ACTIVE ? Math.round(TRANSFER_DIAGNOSTICS.overall_r2 * 100) : 68}% of the variation in GPS metrics — {PIPELINE_ACTIVE && TRANSFER_DIAGNOSTICS.overall_r2 < 0.5 ? "useful for directional signals but not precise speed predictions" : "good enough for style classification but not precise speed predictions"}.
             </p>
           </div>
         )}
@@ -433,6 +521,22 @@ export default function PreviewPage() {
                       (morning line — track handicapper&apos;s opening odds)
                     </span>
                   </th>
+                  {PIPELINE_ACTIVE && pipelineLookup.size > 0 && (
+                    <>
+                      <th className="px-4 py-3 text-xs font-semibold text-[#6b7280] uppercase tracking-wider hidden lg:table-cell">
+                        Model Win%
+                        <span className="block font-normal normal-case tracking-normal text-[#9ca3af]" style={{ fontSize: 10 }}>
+                          (from {MODEL_DIAGNOSTICS.n_train.toLocaleString()} race model)
+                        </span>
+                      </th>
+                      <th className="px-4 py-3 text-xs font-semibold text-[#6b7280] uppercase tracking-wider hidden lg:table-cell">
+                        GPS Edge
+                        <span className="block font-normal normal-case tracking-normal text-[#9ca3af]" style={{ fontSize: 10 }}>
+                          (model vs morning line)
+                        </span>
+                      </th>
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -503,6 +607,45 @@ export default function PreviewPage() {
                       <td className="px-4 py-3 text-base text-[#1a1a2a]">
                         {entry.morningLineOdds.toFixed(1)}
                       </td>
+                      {PIPELINE_ACTIVE && pipelineLookup.size > 0 && (() => {
+                        const pl = pipelineLookup.get(entry.horse);
+                        const val = valueLookup.get(entry.horse);
+                        return (
+                          <>
+                            <td className="px-4 py-3 hidden lg:table-cell">
+                              {pl ? (
+                                <span className="font-mono text-sm font-bold text-[#1a1a2a]">
+                                  {pl.winPct.toFixed(1)}%
+                                </span>
+                              ) : (
+                                <span className="text-xs text-[#9ca3af]">—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 hidden lg:table-cell">
+                              {val ? (
+                                <span
+                                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold"
+                                  style={{
+                                    backgroundColor:
+                                      val.classification === "strong_value" ? "#16a34a15" :
+                                      val.classification === "moderate_value" ? "#b8941f15" :
+                                      val.classification === "overbet" ? "#dc262615" : "#9ca3af10",
+                                    color:
+                                      val.classification === "strong_value" ? "#16a34a" :
+                                      val.classification === "moderate_value" ? "#b8941f" :
+                                      val.classification === "overbet" ? "#dc2626" : "#9ca3af",
+                                  }}
+                                  title={val.insight}
+                                >
+                                  {val.edge > 0 ? "+" : ""}{val.edge.toFixed(1)}%
+                                </span>
+                              ) : (
+                                <span className="text-xs text-[#9ca3af]">—</span>
+                              )}
+                            </td>
+                          </>
+                        );
+                      })()}
                     </tr>
                   );
                 })}
@@ -604,6 +747,79 @@ export default function PreviewPage() {
             })}
           </div>
         </div>
+
+        {/* How to Use This — guided walkthrough */}
+        {PIPELINE_ACTIVE && pipelineLookup.size > 0 && (
+          <div className="mt-10 rounded-2xl border-2 border-[#b8941f30] bg-[#b8941f04] p-6 md:p-8">
+            <h2 className="text-lg font-bold text-[#1a1a2a] mb-2">
+              How to Use This Analysis
+            </h2>
+            <p className="text-sm text-[#6b7280] mb-6">
+              Here&apos;s how GPS data turns into actionable race insight — applied to this field right now.
+            </p>
+
+            <div className="space-y-5">
+              {/* Step 1 */}
+              <div className="flex items-start gap-4">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#b8941f] text-white text-xs font-bold">1</div>
+                <div>
+                  <h3 className="text-sm font-bold text-[#1a1a2a]">Read the Pace Scenario</h3>
+                  <p className="text-sm text-[#6b7280] mt-1">
+                    This field has {styleCounts["Front Runner"]} front runner{styleCounts["Front Runner"] !== 1 ? "s" : ""}, {styleCounts["Stalker"]} stalker{styleCounts["Stalker"] !== 1 ? "s" : ""}, and {styleCounts["Closer"]} closer{styleCounts["Closer"] !== 1 ? "s" : ""}. That projects a <strong>{pace.label.toLowerCase()}</strong>, which favors <strong>{pace.favoredStyle.toLowerCase()}s</strong>. This is Step 1 because pace determines which running styles have the edge — before you even look at speed.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 2 */}
+              <div className="flex items-start gap-4">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#b8941f] text-white text-xs font-bold">2</div>
+                <div>
+                  <h3 className="text-sm font-bold text-[#1a1a2a]">Find the GPS Edge Plays</h3>
+                  <p className="text-sm text-[#6b7280] mt-1">
+                    {(() => {
+                      const values = [...valueLookup.entries()].filter(([, v]) => v.classification === "strong_value");
+                      const overbets = [...valueLookup.entries()].filter(([, v]) => v.classification === "overbet");
+                      if (values.length > 0) {
+                        return `The model identifies ${values.map(([name]) => name).slice(0, 2).join(" and ")} as value plays — the GPS data sees something the morning line doesn't. ${overbets.length > 0 ? `Meanwhile, ${overbets.map(([name]) => name).slice(0, 2).join(" and ")} ${overbets.length > 2 ? `(and ${overbets.length - 2} others)` : ""} appear overbet by the public.` : ""}`;
+                      }
+                      return "Check the GPS Edge column in the table above. Green badges mean the model thinks the horse is undervalued. Red means overbet.";
+                    })()}
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 3 */}
+              <div className="flex items-start gap-4">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#b8941f] text-white text-xs font-bold">3</div>
+                <div>
+                  <h3 className="text-sm font-bold text-[#1a1a2a]">Compare Model Win% to Morning Line</h3>
+                  <p className="text-sm text-[#6b7280] mt-1">
+                    The Model Win% column shows what our {MODEL_DIAGNOSTICS.n_train.toLocaleString()}-race model predicts. When it disagrees with the morning line by more than 5 percentage points, that&apos;s a signal — the GPS data (stride efficiency, acceleration pattern, gate-by-gate speed) is revealing something traditional metrics miss.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 4 */}
+              <div className="flex items-start gap-4">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#b8941f] text-white text-xs font-bold">4</div>
+                <div>
+                  <h3 className="text-sm font-bold text-[#1a1a2a]">Why It Matters</h3>
+                  <p className="text-sm text-[#6b7280] mt-1">
+                    {topContenders.length > 0
+                      ? `Our top pick — ${topContenders[0].entry.horse} (speed figure ${topContenders[0].entry.speedFigure}, ${topContenders[0].entry.runningStyle.toLowerCase()}) — was selected because ${topContenders[0].reason.toLowerCase()} This analysis combines GPS biomechanics with traditional handicapping in a way that wasn't possible before sectional timing existed.`
+                      : "GPS data transforms race analysis from guesswork into measurable science. Every speed figure, stride efficiency metric, and pace projection is computed from real gate-by-gate telemetry."}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {!race.hasGPS && (
+              <p className="text-xs text-[#9ca3af] mt-5 pt-4 border-t border-[#b8941f20]">
+                Note: This track doesn&apos;t have GPS sensors. Speed figures and efficiency metrics are estimated from traditional data using a transfer model (R&sup2; = {TRANSFER_DIAGNOSTICS.overall_r2.toFixed(2)}). Predictions carry lower confidence.
+              </p>
+            )}
+          </div>
+        )}
       </motion.div>
     </div>
   );

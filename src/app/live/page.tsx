@@ -3,26 +3,16 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Timer,
   Trophy,
-  DollarSign,
   ChevronDown,
   Plus,
   Minus,
   X,
   Check,
-  Crown,
-  Medal,
   Ticket,
-  TrendingUp,
   Zap,
   AlertCircle,
-  Clock,
-  Eye,
   Lock,
-  Sparkles,
-  CircleDot,
-  Hash,
   KeyRound,
   LogIn,
   UserPlus,
@@ -34,6 +24,25 @@ import { ALL_PROFILES } from "@/lib/data/horse-profiles";
 import type { HorseProfile } from "@/lib/data/horse-profiles";
 import { runMonteCarlo, simToReplayData } from "@/lib/simulation/engine";
 import type { SimHorse, SimResults, Surface, TrackBias } from "@/lib/simulation/types";
+import { profileToSim } from "@/lib/simulation/helpers";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { PIPELINE_ACTIVE, HORSE_SPEED_FIGURES } from "@/lib/data/pipeline-output";
+import {
+  TimerRing,
+  AnimatedBalance,
+  PostParadeOverlay,
+  WinCelebration,
+  ResultsPanel,
+  LiveActivityFeed,
+  SharedLeaderboard,
+} from "@/components/live";
+import {
+  GOLD, GOLD_LIGHT, BG_WHITE, BG_CARD, BG_DARK, TEXT, TEXT_SEC, TEXT_MUTED,
+  BORDER, GREEN, RED, BLUE, PURPLE, ORANGE, RACE_COLORS,
+  TRACK_CONFIGS, RACE_NAMES, CONDITIONS, SCHOOLS,
+  BET_TYPE_CONFIG, boxCombinations, formatOddsDisplay, formatMoney, getHorseSlug,
+  type Phase, type BetType, type Bet, type UserProfile, type RaceCard, type BetResult,
+} from "@/components/live/constants";
 import LiveRaceView from "@/components/arena/LiveRaceView";
 import { useLeaderboard } from "@/lib/supabase/useLeaderboard";
 import type { LeaderboardEntry, SchoolStanding } from "@/lib/supabase/useLeaderboard";
@@ -41,57 +50,6 @@ import { hashPin } from "@/lib/auth/pin";
 import { registerPlayer, loginPlayer } from "@/lib/supabase/auth";
 import { getHorseImageUrl } from "@/lib/data/horse-images";
 
-/* ================================================================== */
-/*  Constants                                                          */
-/* ================================================================== */
-
-const GOLD = "#b8941f";
-const GOLD_LIGHT = "#c9a84c";
-const BG_WHITE = "#ffffff";
-const BG_CARD = "#f8f6f2";
-const BG_DARK = "#1a1a2a";
-const TEXT = "#1a1a2a";
-const TEXT_SEC = "#6b7280";
-const TEXT_MUTED = "#9ca3af";
-const BORDER = "#e5e2db";
-const GREEN = "#16a34a";
-const RED = "#dc2626";
-const BLUE = "#2563eb";
-const PURPLE = "#7c3aed";
-const ORANGE = "#ea580c";
-
-const RACE_COLORS = [
-  "#c9a84c", "#e74c3c", "#3498db", "#2ecc71", "#9b59b6",
-  "#e67e22", "#1abc9c", "#34495e", "#f39c12", "#c0392b",
-  "#2980b9", "#27ae60",
-];
-
-const TRACK_CONFIGS = [
-  { name: "Churchill Downs", id: "CD", bias: "none" as TrackBias },
-  { name: "Saratoga", id: "SAR", bias: "slight_inside" as TrackBias },
-  { name: "Santa Anita", id: "SA", bias: "none" as TrackBias },
-  { name: "Belmont Park", id: "BEL", bias: "slight_outside" as TrackBias },
-  { name: "Del Mar", id: "DMR", bias: "none" as TrackBias },
-  { name: "Keeneland", id: "KEE", bias: "slight_inside" as TrackBias },
-  { name: "Gulfstream Park", id: "GP", bias: "none" as TrackBias },
-  { name: "Aqueduct", id: "AQU", bias: "slight_inside" as TrackBias },
-  { name: "Oaklawn Park", id: "OP", bias: "none" as TrackBias },
-  { name: "Tampa Bay Downs", id: "TAM", bias: "none" as TrackBias },
-];
-
-const RACE_NAMES = [
-  "The Sprint Classic", "The Maiden Dash", "The Turf Mile",
-  "The Champagne Stakes", "The Gold Cup", "The Derby Trial",
-  "The Breeders' Challenge", "The Lightning Stakes",
-  "The Crown Jewel", "The Midnight Run", "The Iron Horse",
-  "The Victory Lap", "The Thunder Cup", "The Diamond Stakes",
-  "The Eclipse Run", "The Phoenix Stakes",
-];
-
-const CONDITIONS = ["Fast", "Good", "Yielding", "Firm"];
-
-// Phase durations in seconds
-// Import shared timing constants
 import {
   CYCLE_DURATION,
   BETTING_DURATION,
@@ -99,94 +57,6 @@ import {
   RACING_DURATION,
   RESULTS_DURATION,
 } from "@/lib/constants/race-timing";
-
-type Phase = "betting" | "post_parade" | "racing" | "results";
-
-type BetType = "win" | "place" | "show" | "exacta" | "exacta_box" | "trifecta" | "trifecta_box" | "trifecta_key" | "superfecta" | "superfecta_box";
-
-const BET_TYPE_CONFIG: Record<BetType, { label: string; picks: number; description: string; category: "straight" | "exotic" }> = {
-  win:             { label: "Win",            picks: 1, description: "Horse must finish 1st",                     category: "straight" },
-  place:           { label: "Place",          picks: 1, description: "Horse must finish 1st or 2nd",              category: "straight" },
-  show:            { label: "Show",           picks: 1, description: "Horse must finish in top 3",                category: "straight" },
-  exacta:          { label: "Exacta",         picks: 2, description: "Pick 1st and 2nd in exact order",           category: "exotic" },
-  exacta_box:      { label: "Exacta Box",     picks: 2, description: "Pick 1st and 2nd in any order",             category: "exotic" },
-  trifecta:        { label: "Trifecta",       picks: 3, description: "Pick 1st, 2nd, 3rd in exact order",         category: "exotic" },
-  trifecta_box:    { label: "Trifecta Box",   picks: 3, description: "Pick top 3 in any order",                   category: "exotic" },
-  trifecta_key:    { label: "Tri Key",        picks: 3, description: "Key horse wins, others fill 2nd/3rd",       category: "exotic" },
-  superfecta:      { label: "Superfecta",     picks: 4, description: "Pick 1st through 4th in exact order",       category: "exotic" },
-  superfecta_box:  { label: "Super Box",      picks: 4, description: "Pick top 4 in any order",                   category: "exotic" },
-};
-
-// How many combinations for box bets
-function boxCombinations(picks: number): number {
-  if (picks === 2) return 2; // 2!
-  if (picks === 3) return 6; // 3!
-  if (picks === 4) return 24; // 4!
-  return 1;
-}
-
-interface Bet {
-  id: string;
-  type: BetType;
-  horseNames: string[];
-  amount: number;       // per combination
-  totalCost: number;    // amount * combinations
-  combinations: number;
-}
-
-const SCHOOLS = [
-  "University of Kentucky",
-  "NYU",
-  "MIT",
-  "Stanford",
-  "Harvard",
-  "Wharton",
-  "University of Chicago",
-  "Columbia",
-  "Duke",
-  "Yale",
-  "Princeton",
-  "Georgetown",
-  "UCLA",
-  "UC Berkeley",
-  "Michigan",
-  "Virginia",
-  "Cornell",
-  "Northwestern",
-  "Notre Dame",
-  "Other",
-];
-
-interface UserProfile {
-  id: string;
-  name: string;
-  school: string;
-  bankroll: number;
-  startingBankroll: number;
-  totalProfit: number;
-  racesPlayed: number;
-  biggestWin: number;
-  history: { raceEpoch: number; profit: number; bankroll: number }[];
-}
-
-interface RaceCard {
-  name: string;
-  track: typeof TRACK_CONFIGS[number];
-  distance: number;
-  surface: Surface;
-  condition: string;
-  purse: number;
-  raceNumber: number;
-  epoch: number;
-  horses: SimHorse[];
-  odds: Record<string, { win: number; place: number; show: number }>;
-}
-
-interface BetResult {
-  bet: Bet;
-  payout: number;
-  won: boolean;
-}
 
 /* ================================================================== */
 /*  Seeded PRNG (Mulberry32)                                           */
@@ -228,44 +98,30 @@ import {
 /*  Helpers                                                            */
 /* ================================================================== */
 
-function profileToSim(profile: HorseProfile, postPosition: number): SimHorse {
-  const finishes = profile.recentForm.map((r) => r.finish);
-  const mean = finishes.reduce((a, b) => a + b, 0) / finishes.length;
-  const variance = finishes.reduce((a, f) => a + (f - mean) ** 2, 0) / finishes.length;
-  const stdev = Math.sqrt(variance);
-  const consistency = stdev < 1.5 ? 0.3 : stdev < 2.5 ? 0.5 : 0.8;
-
-  // Calculate recent form average for traditional factor
-  const recentFormAvg = finishes.length > 0 ? mean : undefined;
-
-  return {
-    name: profile.name,
-    color: RACE_COLORS[postPosition % RACE_COLORS.length],
-    imageUrl: profile.imageUrl,
-    speedCurve: profile.speedCurve,
-    topSpeed: profile.topSpeed,
-    avgSpeed: profile.avgSpeed,
-    strideEfficiency: profile.strideEfficiency,
-    runningStyle: profile.runningStyle,
-    consistency,
-    postPosition,
-    isCustom: false,
-    // Traditional handicapping factors
-    bestDistance: profile.bestDistance,
-    bestSurface: profile.bestSurface,
-    recentFormAvg,
-    careerWins: profile.wins,
-    age: profile.age,
-  };
-}
-
 function generateSeededRace(epoch: number): RaceCard {
   const rand = createSeededRandom(epoch * 7919 + 31337);
 
   const numHorses = 6 + Math.floor(rand() * 5); // 6-10
   const shuffled = seededShuffle(ALL_PROFILES, rand);
   const selected = shuffled.slice(0, Math.min(numHorses, shuffled.length));
-  const horses = selected.map((p, i) => profileToSim(p, i + 1));
+  const horses = selected.map((p, i) => {
+    const sim = profileToSim(p, i + 1, RACE_COLORS[(i + 1) % RACE_COLORS.length]);
+    // Blend pipeline-computed speed figures into avgSpeed when available.
+    // This makes the Monte Carlo reflect real data-backed ability, not just profile curves.
+    if (PIPELINE_ACTIVE) {
+      const figs = HORSE_SPEED_FIGURES[p.name];
+      if (figs && figs.avg_last_5 > 0) {
+        // Speed figure 100 = average. Convert figure delta to ft/s delta.
+        // 10 figure points ≈ 1 stdev ≈ ~1.4 ft/s (from pipeline stats: stdev=1.4)
+        const figDelta = (figs.avg_last_5 - 100) / 10 * 1.4;
+        // Blend: 70% profile avgSpeed + 30% figure-adjusted speed
+        const fieldAvg = 16.5; // approximate field average ft/s
+        const figAdjusted = fieldAvg + figDelta;
+        sim.avgSpeed = Math.round((sim.avgSpeed * 0.7 + figAdjusted * 0.3) * 100) / 100;
+      }
+    }
+    return sim;
+  });
 
   const distances = [5, 6, 7, 8, 9, 10];
   const distance = distances[Math.floor(rand() * distances.length)];
@@ -276,80 +132,34 @@ function generateSeededRace(epoch: number): RaceCard {
   const track = seededPick(TRACK_CONFIGS, rand);
   const name = seededPick(RACE_NAMES, rand);
 
-  // Generate realistic odds using power ratings based on horse data
-  // Instead of pure Monte Carlo (which is too noisy with small samples),
-  // compute a power rating from speed, consistency, running style fit, etc.
-  const odds: Record<string, { win: number; place: number; show: number }> = {};
-
-  // Step 1: Compute a "power rating" for each horse
-  const ratings: { name: string; power: number }[] = horses.map((h) => {
-    const profile = ALL_PROFILES.find((p) => p.name === h.name);
-    let power = h.avgSpeed * 5; // base from avg speed
-
-    // Bonus for top speed
-    power += h.topSpeed * 2;
-
-    // Consistency bonus (lower consistency value = more consistent = better)
-    power += (1 - h.consistency) * 8;
-
-    // Distance fit: check if horse's best distance matches race distance
-    if (profile) {
-      const bestDist = parseFloat(profile.bestDistance.replace("F", ""));
-      const distDiff = Math.abs(bestDist - distance);
-      power -= distDiff * 3; // penalty for distance mismatch
-
-      // Surface fit
-      if (profile.bestSurface === surface || profile.bestSurface === "Both") {
-        power += 5;
-      } else {
-        power -= 5;
-      }
-
-      // Recent form bonus
-      const recentWins = profile.recentForm.slice(0, 3).filter((f) => f.finish <= 2).length;
-      power += recentWins * 4;
-
-      // Avg finish position (lower is better)
-      power -= profile.avgFinish * 2;
-    }
-
-    // Running style interaction with pace scenario
-    const numFrontRunners = horses.filter((hh) => hh.runningStyle === "Front Runner").length;
-    if (h.runningStyle === "Closer" && numFrontRunners >= 3) power += 5; // hot pace helps closers
-    if (h.runningStyle === "Front Runner" && numFrontRunners === 1) power += 4; // lone speed advantage
-    if (h.runningStyle === "Front Runner" && numFrontRunners >= 3) power -= 3; // too much speed
-
-    // Small random perturbation from the seeded random (so odds aren't identical across epochs)
-    power += (rand() - 0.5) * 6;
-
-    return { name: h.name, power: Math.max(1, power) };
+  // Generate odds by running the SAME simulation engine used for race results.
+  // This ensures displayed odds actually predict outcomes — one unified model.
+  // Use a separate seeded RNG so odds are deterministic per epoch but don't
+  // consume the same seed as the race result.
+  const oddsRand = createSeededRandom(epoch * 4993 + 17389);
+  const oddsSim = runMonteCarlo({
+    horses,
+    distanceFurlongs: distance,
+    surface,
+    trackBias: track.bias,
+    numSimulations: 200, // enough for stable odds, fast enough for race generation
+    random: oddsRand,
   });
 
-  // Step 2: Convert power ratings to win probabilities using softmax
-  const maxPower = Math.max(...ratings.map((r) => r.power));
-  const expRatings = ratings.map((r) => ({
-    name: r.name,
-    exp: Math.exp((r.power - maxPower) / 4), // temperature=4 for spread
-  }));
-  const totalExp = expRatings.reduce((s, r) => s + r.exp, 0);
+  // Convert Monte Carlo win/place/show percentages to decimal odds with 15% vig.
+  // Vig is applied to PROFIT only (not total return), matching real track practice.
+  // Formula: decimal = 1 + (fairProfit * (1 - vig))
+  //        = 1 + ((100/pct - 1) * 0.85)
+  const VIG = 0.15;
+  const odds: Record<string, { win: number; place: number; show: number }> = {};
+  for (const h of oddsSim.horses) {
+    const winPct = Math.max(2, h.winPct);   // floor at 2% so no infinite odds
+    const placePct = Math.max(5, h.placePct);
+    const showPct = Math.max(10, h.showPct);
 
-  const winProbs = new Map<string, number>();
-  for (const r of expRatings) {
-    winProbs.set(r.name, r.exp / totalExp);
-  }
-
-  // Step 3: Convert probabilities to odds
-  for (const h of horses) {
-    const winProb = winProbs.get(h.name) ?? 0.05;
-    // Ensure minimum probability so no horse is truly 0%
-    const adjWinProb = Math.max(0.02, Math.min(0.6, winProb));
-    const placeProb = Math.min(0.85, adjWinProb * 2.2 + 0.05);
-    const showProb = Math.min(0.92, adjWinProb * 3.0 + 0.1);
-
-    // Convert to decimal odds with 15% track take (vigorish)
-    const winOdds = Math.max(1.2, Math.min(30, (1 / adjWinProb) * 0.85));
-    const placeOdds = Math.max(1.1, Math.min(12, (1 / placeProb) * 0.85));
-    const showOdds = Math.max(1.05, Math.min(5, (1 / showProb) * 0.85));
+    const winOdds = Math.max(1.2, Math.min(30, 1 + (100 / winPct - 1) * (1 - VIG)));
+    const placeOdds = Math.max(1.1, Math.min(12, 1 + (100 / placePct - 1) * (1 - VIG)));
+    const showOdds = Math.max(1.05, Math.min(5, 1 + (100 / showPct - 1) * (1 - VIG)));
 
     odds[h.name] = {
       win: Math.round(winOdds * 10) / 10,
@@ -368,11 +178,7 @@ function generateSeededRace(epoch: number): RaceCard {
 function generateSeededResult(race: RaceCard) {
   // Use a separate seed derived from epoch for the actual result
   const resultSeed = race.epoch * 13397 + 77773;
-  const savedRandom = Math.random;
-
-  // Temporarily override Math.random with seeded version for simulation
   const seededRand = createSeededRandom(resultSeed);
-  (Math as { random: () => number }).random = seededRand;
 
   const results = runMonteCarlo({
     horses: race.horses,
@@ -380,10 +186,8 @@ function generateSeededResult(race: RaceCard) {
     surface: race.surface,
     trackBias: race.track.bias,
     numSimulations: 1,
+    random: seededRand,
   });
-
-  // Restore real Math.random
-  (Math as { random: () => number }).random = savedRandom;
 
   const order = results.allRaces[0]?.finishOrder ?? [];
   const replay = results.allRaces[0]
@@ -393,37 +197,10 @@ function generateSeededResult(race: RaceCard) {
   return { results, order, replay };
 }
 
-function formatMoney(amount: number): string {
-  if (Math.abs(amount) >= 10000) return `$${(amount / 1000).toFixed(1)}k`;
-  if (Math.abs(amount) >= 1000) return `$${(amount / 1000).toFixed(1)}k`;
-  return `$${amount.toFixed(0)}`;
-}
-
-function formatOddsDisplay(odds: number): string {
-  if (!isFinite(odds) || odds <= 0) return "30-1";
-  if (odds >= 30) return "30-1";
-  if (odds >= 10) return `${Math.round(odds)}-1`;
-  // Traditional track fractions
-  if (odds >= 5) return `${Math.round(odds)}-1`;
-  if (odds >= 3) return `${Math.round(odds * 2) / 2}-1`;
-  if (odds >= 2) return `${(odds).toFixed(1)}-1`;
-  if (odds >= 1.5) return "5-2";
-  if (odds >= 1.4) return "2-1";
-  if (odds >= 1.3) return "3-2";
-  if (odds >= 1.2) return "6-5";
-  return "Even";
-}
-
-/** Get horse profile slug for linking */
-function getHorseSlug(name: string): string {
-  return name.toLowerCase().replace(/\s+/g, "-");
-}
-
 /** Find profile by horse name to get imageUrl */
 function getHorseImage(name: string): string {
   return getHorseImageUrl(name);
 }
-
 
 /* ================================================================== */
 /*  localStorage User Management                                       */
@@ -569,89 +346,6 @@ function calculateBetPayout(bet: Bet, finishOrder: string[], odds: RaceCard["odd
     default:
       return { won: false, payout: 0 };
   }
-}
-
-/* ================================================================== */
-/*  Animated Balance Counter                                           */
-/* ================================================================== */
-
-function AnimatedBalance({ value, prefix = "$" }: { value: number; prefix?: string }) {
-  const [display, setDisplay] = useState(value);
-  const prevRef = useRef(value);
-
-  useEffect(() => {
-    const from = prevRef.current;
-    const to = value;
-    if (from === to) return;
-    prevRef.current = to;
-
-    const diff = to - from;
-    const duration = 1500;
-    const startTime = performance.now();
-
-    function tick(now: number) {
-      const elapsed = now - startTime;
-      const t = Math.min(elapsed / duration, 1);
-      // Ease out cubic
-      const eased = 1 - Math.pow(1 - t, 3);
-      setDisplay(Math.round(from + diff * eased));
-      if (t < 1) requestAnimationFrame(tick);
-    }
-    requestAnimationFrame(tick);
-  }, [value]);
-
-  const isUp = value > prevRef.current;
-  const isDown = value < prevRef.current;
-
-  return (
-    <span className="font-mono font-bold tabular-nums">
-      {prefix}{display.toLocaleString()}
-    </span>
-  );
-}
-
-/* ================================================================== */
-/*  Timer Ring                                                         */
-/* ================================================================== */
-
-function TimerRing({ seconds, total, phase, label }: { seconds: number; total: number; phase: Phase; label: string }) {
-  const pct = total > 0 ? seconds / total : 0;
-  const radius = 34;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference * (1 - pct);
-  const color = phase === "betting" ? GOLD : phase === "post_parade" ? ORANGE : phase === "racing" ? GREEN : BLUE;
-  const isUrgent = phase === "betting" && seconds <= 30;
-
-  return (
-    <div className="relative w-[88px] h-[88px] flex items-center justify-center">
-      <svg width="88" height="88" className="absolute -rotate-90">
-        <circle cx="44" cy="44" r={radius} fill="none" stroke={BORDER} strokeWidth="3.5" />
-        <motion.circle
-          cx="44" cy="44" r={radius} fill="none"
-          stroke={isUrgent ? RED : color} strokeWidth="3.5"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          animate={isUrgent ? { opacity: [1, 0.5, 1] } : {}}
-          transition={isUrgent ? { repeat: Infinity, duration: 0.8 } : {}}
-        />
-      </svg>
-      <div className="text-center z-10">
-        <div
-          className="text-lg font-mono font-bold"
-          style={{ color: isUrgent ? RED : TEXT }}
-        >
-          {formatTimer(seconds)}
-        </div>
-        <div
-          className="text-[9px] font-semibold uppercase tracking-wider"
-          style={{ color: isUrgent ? RED : color }}
-        >
-          {label}
-        </div>
-      </div>
-    </div>
-  );
 }
 
 /* ================================================================== */
@@ -1340,481 +1034,6 @@ function BetSlipBuilder({
 }
 
 /* ================================================================== */
-/*  Post Parade Overlay                                                */
-/* ================================================================== */
-
-function PostParadeOverlay({ race, timer }: { race: RaceCard; timer: number }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="rounded-2xl overflow-hidden"
-      style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}
-    >
-      <div className="px-6 py-8 text-center space-y-4">
-        <motion.div
-          animate={{ scale: [1, 1.02, 1] }}
-          transition={{ repeat: Infinity, duration: 2 }}
-          className="space-y-3"
-        >
-          <div className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: GOLD }}>
-            Post Parade
-          </div>
-          <h2 className="text-2xl font-bold" style={{ color: TEXT }}>
-            {race.name}
-          </h2>
-          <div className="text-sm" style={{ color: TEXT_SEC }}>
-            {race.track.name} {"·"} {race.distance}F {race.surface} {"·"} {race.condition}
-          </div>
-        </motion.div>
-
-        <div className="grid grid-cols-2 gap-2 max-w-md mx-auto mt-6">
-          {race.horses.map((horse, i) => (
-            <motion.div
-              key={horse.name}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.15 }}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg"
-              style={{ background: BG_WHITE, border: `1px solid ${BORDER}` }}
-            >
-              <div
-                className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
-                style={{ background: horse.color, color: "#fff" }}
-              >
-                {i + 1}
-              </div>
-              <span className="text-xs font-medium truncate" style={{ color: TEXT }}>
-                {horse.name}
-              </span>
-              <div className="ml-auto w-1.5 h-1.5 rounded-full animate-pulse-live" style={{ background: GOLD }} />
-            </motion.div>
-          ))}
-        </div>
-
-        <motion.div className="mt-6">
-          <div
-            className="text-5xl font-mono font-bold"
-            style={{ color: GOLD }}
-          >
-            {timer}
-          </div>
-          <div className="text-xs uppercase tracking-wider mt-1" style={{ color: TEXT_MUTED }}>
-            seconds to post
-          </div>
-        </motion.div>
-      </div>
-    </motion.div>
-  );
-}
-
-/* ================================================================== */
-/*  Win Celebration Overlay                                            */
-/* ================================================================== */
-
-function WinCelebration({ winnerName, totalWinnings }: { winnerName: string; totalWinnings: number }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.8 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.8 }}
-      className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl"
-      style={{ background: "rgba(26,26,42,0.85)", backdropFilter: "blur(8px)" }}
-    >
-      <div className="text-center space-y-3">
-        {/* Gold confetti particles */}
-        {Array.from({ length: 24 }).map((_, i) => (
-          <motion.div
-            key={i}
-            initial={{
-              x: 0,
-              y: 0,
-              scale: 0,
-              rotate: 0,
-            }}
-            animate={{
-              x: (Math.random() - 0.5) * 350,
-              y: (Math.random() - 0.5) * 250 - 100,
-              scale: [0, 1, 0],
-              rotate: Math.random() * 720,
-            }}
-            transition={{
-              duration: 2.5,
-              delay: Math.random() * 0.4,
-              ease: "easeOut",
-            }}
-            className="absolute w-2 h-2 rounded-sm"
-            style={{
-              background: [GOLD, "#f0d060", GREEN, BLUE, PURPLE, "#fff"][i % 6],
-              left: "50%",
-              top: "50%",
-            }}
-          />
-        ))}
-
-        <motion.div
-          animate={{ rotate: [0, -10, 10, -10, 0] }}
-          transition={{ delay: 0.3, duration: 0.5 }}
-        >
-          <Trophy className="w-16 h-16 mx-auto" style={{ color: GOLD }} />
-        </motion.div>
-
-        <motion.h2
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="text-3xl font-bold text-white"
-        >
-          Winner!
-        </motion.h2>
-
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          className="text-lg font-bold"
-          style={{ color: GOLD }}
-        >
-          {winnerName}
-        </motion.div>
-
-        {totalWinnings > 0 && (
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.6, type: "spring" }}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl mt-2"
-            style={{ background: `${GREEN}20`, border: `2px solid ${GREEN}` }}
-          >
-            <DollarSign className="w-5 h-5" style={{ color: GREEN }} />
-            <span className="text-2xl font-mono font-bold" style={{ color: GREEN }}>
-              +${totalWinnings.toLocaleString()}
-            </span>
-          </motion.div>
-        )}
-      </div>
-    </motion.div>
-  );
-}
-
-/* ================================================================== */
-/*  Results Panel                                                      */
-/* ================================================================== */
-
-function ResultsPanel({
-  race,
-  finishOrder,
-  betResults,
-  totalWinnings,
-  totalWagered,
-}: {
-  race: RaceCard;
-  finishOrder: string[];
-  betResults: BetResult[];
-  totalWinnings: number;
-  totalWagered: number;
-}) {
-  const netProfit = totalWinnings - totalWagered;
-
-  return (
-    <div className="space-y-5">
-      {/* Finish Order */}
-      <div>
-        <h3 className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: TEXT_SEC }}>
-          Official Results
-        </h3>
-        <div className="space-y-1.5">
-          {finishOrder.slice(0, 5).map((name, i) => {
-            const horse = race.horses.find((h) => h.name === name);
-            const badgeColors = [GOLD, "#c0c0c0", "#cd7f32", TEXT_MUTED, TEXT_MUTED];
-            const isWinner = i === 0;
-            return (
-              <motion.div
-                key={name}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.12 }}
-                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg ${isWinner ? "animate-gold-shimmer" : ""}`}
-                style={{
-                  background: isWinner ? `${GOLD}12` : BG_CARD,
-                  border: `1.5px solid ${isWinner ? GOLD : BORDER}`,
-                }}
-              >
-                <div
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
-                  style={{ background: badgeColors[i], color: "#fff" }}
-                >
-                  {i + 1}
-                </div>
-                <div
-                  className="w-3 h-3 rounded-full shrink-0"
-                  style={{ background: horse?.color ?? TEXT_MUTED, boxShadow: `0 0 6px ${horse?.color ?? TEXT_MUTED}50` }}
-                />
-                <span className="text-sm font-bold flex-1 truncate" style={{ color: isWinner ? GOLD : TEXT }}>
-                  {name}
-                </span>
-                <span className="text-[11px] font-mono px-2 py-0.5 rounded-full" style={{ background: `${GOLD}10`, color: GOLD }}>
-                  {formatOddsDisplay(race.odds[name]?.win ?? 2)}
-                </span>
-                {isWinner && <Trophy className="w-4 h-4 shrink-0" style={{ color: GOLD }} />}
-              </motion.div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Photo finish indicator for close races */}
-      {finishOrder.length >= 2 && (
-        (() => {
-          const o1 = race.odds[finishOrder[0]]?.win ?? 2;
-          const o2 = race.odds[finishOrder[1]]?.win ?? 2;
-          const isClose = Math.abs(o1 - o2) < 3;
-          if (!isClose) return null;
-          return (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg"
-              style={{ background: `${ORANGE}08`, border: `1px solid ${ORANGE}30` }}
-            >
-              <Eye className="w-3.5 h-3.5" style={{ color: ORANGE }} />
-              <span className="text-[11px] font-semibold" style={{ color: ORANGE }}>
-                Photo Finish! {finishOrder[0]} edges {finishOrder[1]}
-              </span>
-            </motion.div>
-          );
-        })()
-      )}
-
-      {/* Bet results are shown in the persistent "Your Bets This Race" card below */}
-    </div>
-  );
-}
-
-/* ================================================================== */
-/*  Live Activity Feed                                                 */
-/* ================================================================== */
-
-function LiveActivityFeed({ wins }: { wins: { name: string; bet_type: string; payout: number; selections: string[] }[] }) {
-  if (wins.length === 0) return null;
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <Sparkles className="w-3.5 h-3.5" style={{ color: GREEN }} />
-        <span className="text-xs font-bold uppercase tracking-wider" style={{ color: TEXT_SEC }}>
-          Recent Wins
-        </span>
-      </div>
-      <div className="space-y-1">
-        {wins.slice(0, 5).map((w, i) => (
-          <div key={i} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg" style={{ background: `${GREEN}06`, border: `1px solid ${GREEN}15` }}>
-            <Trophy className="w-3 h-3 shrink-0" style={{ color: GREEN }} />
-            <div className="flex-1 min-w-0">
-              <span className="text-[11px] font-bold" style={{ color: TEXT }}>{w.name}</span>
-              <span className="text-[10px] mx-1" style={{ color: TEXT_MUTED }}>won</span>
-              <span className="text-[10px]" style={{ color: TEXT_SEC }}>{w.selections[0]}</span>
-            </div>
-            <span className="text-[11px] font-bold font-mono shrink-0" style={{ color: GREEN }}>
-              +${w.payout}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ================================================================== */
-/*  Shared Leaderboard Component                                       */
-/* ================================================================== */
-
-function SharedLeaderboard({
-  entries,
-  schoolStandings,
-  currentUserId,
-  connected,
-  loading,
-}: {
-  entries: LeaderboardEntry[];
-  schoolStandings: SchoolStanding[];
-  currentUserId?: string;
-  connected: boolean;
-  loading: boolean;
-}) {
-  const [tab, setTab] = useState<"players" | "schools">("players");
-
-  if (loading) {
-    return (
-      <div className="py-4 text-center">
-        <div className="animate-pulse text-xs" style={{ color: TEXT_MUTED }}>Loading leaderboard...</div>
-      </div>
-    );
-  }
-
-  if (entries.length === 0 && !connected) {
-    return (
-      <div className="py-4 text-center">
-        <p className="text-xs" style={{ color: TEXT_MUTED }}>Leaderboard offline</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-2">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <TrendingUp className="w-3.5 h-3.5" style={{ color: GOLD }} />
-        <span className="text-xs font-bold uppercase tracking-wider" style={{ color: TEXT_SEC }}>
-          Leaderboard
-        </span>
-        {connected && (
-          <span className="ml-auto flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full"
-            style={{ background: `${GREEN}15`, color: GREEN, border: `1px solid ${GREEN}30` }}>
-            <CircleDot className="w-2 h-2" /> Live
-          </span>
-        )}
-      </div>
-
-      {/* Pill tab switch */}
-      <div className="flex gap-1 p-1 rounded-xl" style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}>
-        {(["players", "schools"] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold capitalize transition-all"
-            style={{
-              background: tab === t ? `${GOLD}15` : "transparent",
-              color: tab === t ? GOLD : TEXT_MUTED,
-              border: tab === t ? `1px solid ${GOLD}30` : "1px solid transparent",
-            }}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
-
-      {/* Players tab */}
-      {tab === "players" && (
-        <div className="space-y-1">
-          {entries.length === 0 ? (
-            <p className="text-xs text-center py-3" style={{ color: TEXT_MUTED }}>No players yet. Be the first!</p>
-          ) : entries.slice(0, 10).map((entry, i) => {
-            const isYou = entry.id === currentUserId;
-            const profit = entry.total_profit;
-            const Icon = i === 0 ? Crown : i === 1 ? Medal : i === 2 ? Trophy : Hash;
-
-            return (
-              <motion.div
-                key={entry.id}
-                layout
-                className="flex items-center gap-2 px-2.5 py-2 rounded-lg transition-all"
-                style={{
-                  background: isYou ? `${GOLD}08` : BG_CARD,
-                  border: `1px solid ${isYou ? GOLD : BORDER}`,
-                  borderLeft: isYou ? `3px solid ${GOLD}` : undefined,
-                }}
-              >
-                <div
-                  className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
-                  style={{
-                    background: i === 0 ? `${GOLD}20` : i < 3 ? `${TEXT_MUTED}15` : "transparent",
-                    color: i === 0 ? GOLD : TEXT_SEC,
-                  }}
-                >
-                  {i < 3 ? <Icon className="w-2.5 h-2.5" /> : <span className="text-[9px] font-mono">{i + 1}</span>}
-                </div>
-                <div
-                  className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[9px] font-bold"
-                  style={{ background: `${GOLD}15`, color: GOLD }}
-                >
-                  {entry.name.charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[11px] font-bold truncate" style={{ color: TEXT }}>
-                    {entry.name} {isYou && <span className="text-[9px] font-normal" style={{ color: GOLD }}>(you)</span>}
-                  </div>
-                  <div className="text-[9px] truncate" style={{ color: TEXT_MUTED }}>
-                    {entry.school || "No school"} · {entry.races_played}R
-                  </div>
-                </div>
-                <div className="text-right shrink-0">
-                  <div className="text-[11px] font-bold font-mono" style={{ color: GOLD }}>
-                    ${Math.round(entry.bankroll).toLocaleString()}
-                  </div>
-                  <div className="text-[9px] font-mono px-1.5 py-0.5 rounded-full"
-                    style={{
-                      background: profit >= 0 ? `${GREEN}12` : `${RED}12`,
-                      color: profit >= 0 ? GREEN : RED,
-                    }}>
-                    {profit >= 0 ? "+" : ""}{Math.round(profit)}
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Schools tab */}
-      {tab === "schools" && (
-        <div className="space-y-1">
-          {schoolStandings.length === 0 ? (
-            <p className="text-xs text-center py-3" style={{ color: TEXT_MUTED }}>No school data yet — place bets to represent your school!</p>
-          ) : schoolStandings.slice(0, 10).map((school, i) => (
-            <motion.div
-              key={school.school}
-              layout
-              className="px-2.5 py-2 rounded-lg"
-              style={{
-                background: i === 0 ? `${GOLD}06` : BG_WHITE,
-                border: `1px solid ${i === 0 ? GOLD : BORDER}`,
-              }}
-            >
-              <div className="flex items-center gap-2">
-                {/* Rank */}
-                <div
-                  className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[9px] font-bold"
-                  style={{
-                    background: i === 0 ? GOLD : i < 3 ? `${TEXT_MUTED}20` : BG_CARD,
-                    color: i === 0 ? "#fff" : TEXT_SEC,
-                  }}
-                >
-                  {i + 1}
-                </div>
-
-                {/* School info */}
-                <div className="flex-1 min-w-0">
-                  <div className="text-[11px] font-bold truncate" style={{ color: i === 0 ? GOLD : TEXT }}>
-                    {school.school}
-                  </div>
-                  <div className="text-[9px] flex items-center gap-1" style={{ color: TEXT_MUTED }}>
-                    <span>{school.players} player{school.players !== 1 ? "s" : ""}</span>
-                    <span>·</span>
-                    <span>Avg ${school.avgBankroll.toLocaleString()}</span>
-                  </div>
-                </div>
-
-                {/* Profit */}
-                <div className="text-right shrink-0">
-                  <div className="text-[11px] font-bold font-mono" style={{ color: school.totalProfit > 0 ? GREEN : school.totalProfit < 0 ? RED : TEXT_MUTED }}>
-                    {school.totalProfit > 0 ? "+" : ""}{school.totalProfit === 0 ? "$0" : `$${Math.abs(school.totalProfit).toLocaleString()}`}
-                  </div>
-                  <div className="text-[9px]" style={{ color: TEXT_MUTED }}>
-                    {school.players} player{school.players !== 1 ? "s" : ""}
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ================================================================== */
 /*  Main Page Component                                                */
 /* ================================================================== */
 
@@ -2243,13 +1462,15 @@ export default function LiveRacingPage() {
 
                   {/* Bet controls — seamlessly integrated */}
                   <div className="pt-3" style={{ borderTop: `1px solid ${BORDER}` }}>
-                    <BetSlipBuilder
-                      race={race}
-                      bets={bets}
-                      bankroll={user.bankroll}
-                      onPlaceBet={placeBet}
-                      onRemoveBet={removeBet}
-                    />
+                    <ErrorBoundary section="Bet Slip">
+                      <BetSlipBuilder
+                        race={race}
+                        bets={bets}
+                        bankroll={user.bankroll}
+                        onPlaceBet={placeBet}
+                        onRemoveBet={removeBet}
+                      />
+                    </ErrorBoundary>
                   </div>
                 </div>
               )}
@@ -2443,14 +1664,16 @@ export default function LiveRacingPage() {
 
                 {/* Live race view during racing + results */}
                 {(phase === "racing" || phase === "results") && replayData && (
-                  <LiveRaceView
-                    horses={replayData.horses}
-                    colors={replayData.colors}
-                    distance={race.distance}
-                    progress={phase === "results" ? 1 : Math.min(1, (RACING_DURATION - timer) / RACING_DURATION)}
-                    isRacing={phase === "racing"}
-                    isFinished={phase === "results"}
-                  />
+                  <ErrorBoundary section="Race Visualization">
+                    <LiveRaceView
+                      horses={replayData.horses}
+                      colors={replayData.colors}
+                      distance={race.distance}
+                      progress={phase === "results" ? 1 : Math.min(1, (RACING_DURATION - timer) / RACING_DURATION)}
+                      isRacing={phase === "racing"}
+                      isFinished={phase === "results"}
+                    />
+                  </ErrorBoundary>
                 )}
 
                 {/* No content during betting — center column is hidden */}
@@ -2589,13 +1812,15 @@ export default function LiveRacingPage() {
 
                 {/* Leaderboard — always visible, most important */}
                 <div className="p-3 rounded-2xl" style={{ background: BG_WHITE, border: `1.5px solid ${BORDER}` }}>
-                  <SharedLeaderboard
-                    entries={leaderboard}
-                    schoolStandings={schoolStandings}
-                    currentUserId={user?.id}
-                    connected={lbConnected}
-                    loading={lbLoading}
-                  />
+                  <ErrorBoundary section="Leaderboard">
+                    <SharedLeaderboard
+                      entries={leaderboard}
+                      schoolStandings={schoolStandings}
+                      currentUserId={user?.id}
+                      connected={lbConnected}
+                      loading={lbLoading}
+                    />
+                  </ErrorBoundary>
                 </div>
 
                 {/* Recent Wins — live social proof */}

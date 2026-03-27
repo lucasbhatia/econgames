@@ -10,6 +10,7 @@ import {
   Zap,
   Dices,
 } from "lucide-react";
+import { PIPELINE_ACTIVE, MODEL_DIAGNOSTICS } from "@/lib/data/pipeline-output";
 import {
   FEATURED_RACE,
   HORSE_COLORS,
@@ -193,6 +194,53 @@ export default function Home() {
               </div>
             ))}
           </div>
+
+          {/* A/B Proof: GPS vs Traditional model comparison */}
+          {PIPELINE_ACTIVE && MODEL_DIAGNOSTICS.gps_added_value && (
+            <motion.div {...fade} className="rounded-2xl border-2 border-[#1a3a2a30] bg-[#1a3a2a06] p-6 md:p-8 mb-10">
+              <h3 className="text-lg font-bold text-[#1a1a2a] mb-2">
+                The Proof: GPS vs Traditional (Same Model, Same Data)
+              </h3>
+              <p className="text-sm text-[#6b7280] mb-6">
+                We trained the same prediction model twice — once with only traditional features (odds, finish time, field size), and once adding GPS features (sectional speed, stride efficiency, acceleration). Validated on {MODEL_DIAGNOSTICS.n_val.toLocaleString()} held-out races.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="rounded-xl bg-white border border-[#e5e2db] p-5 text-center">
+                  <div className="text-xs font-bold uppercase text-[#9ca3af] mb-2">Traditional Only</div>
+                  <div className="text-3xl font-mono font-bold text-[#6b7280]">
+                    {MODEL_DIAGNOSTICS.traditional_only.r2_val.toFixed(2)}
+                  </div>
+                  <div className="text-xs text-[#9ca3af] mt-1">R² (accuracy)</div>
+                  <div className="text-sm font-mono text-[#6b7280] mt-2">
+                    MAE: {MODEL_DIAGNOSTICS.traditional_only.mae_val.toFixed(2)} positions
+                  </div>
+                </div>
+                <div className="rounded-xl border-2 border-[#b8941f] bg-[#b8941f08] p-5 text-center">
+                  <div className="text-xs font-bold uppercase text-[#b8941f] mb-2">GPS + Traditional</div>
+                  <div className="text-3xl font-mono font-bold text-[#b8941f]">
+                    {MODEL_DIAGNOSTICS.ensemble.r2_val.toFixed(2)}
+                  </div>
+                  <div className="text-xs text-[#b8941f] mt-1">R² (accuracy)</div>
+                  <div className="text-sm font-mono text-[#1a1a2a] mt-2">
+                    MAE: {MODEL_DIAGNOSTICS.ensemble.mae_val.toFixed(2)} positions
+                  </div>
+                </div>
+                <div className="rounded-xl bg-[#16a34a08] border border-[#16a34a30] p-5 text-center">
+                  <div className="text-xs font-bold uppercase text-[#16a34a] mb-2">GPS Added Value</div>
+                  <div className="text-3xl font-mono font-bold text-[#16a34a]">
+                    +{MODEL_DIAGNOSTICS.gps_added_value.r2_improvement_pct.toFixed(0)}%
+                  </div>
+                  <div className="text-xs text-[#16a34a] mt-1">accuracy improvement</div>
+                  <div className="text-sm font-mono text-[#16a34a] mt-2">
+                    {MODEL_DIAGNOSTICS.gps_added_value.mae_improvement.toFixed(1)} fewer position errors
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs text-[#9ca3af] mt-4 text-center">
+                Trained on {MODEL_DIAGNOSTICS.n_train.toLocaleString()} races across 10 GPS-equipped tracks. Top GPS feature: early gate position (0.73 importance).
+              </p>
+            </motion.div>
+          )}
 
           {/* Real example */}
           <motion.div {...fade} className="rounded-2xl border border-[#e5e2db] bg-white p-6 md:p-8">

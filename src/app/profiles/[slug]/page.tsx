@@ -12,7 +12,9 @@ import {
   Activity,
   TrendingUp,
   ChevronRight,
+  BarChart3,
 } from "lucide-react";
+import { PIPELINE_ACTIVE, getHorseSpeedFigures } from "@/lib/data/pipeline-output";
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 
@@ -223,6 +225,8 @@ export default function HorseProfilePage({
     { label: "Weight", value: `${horse.weight} lbs` },
   ];
 
+  const speedFigs = PIPELINE_ACTIVE ? getHorseSpeedFigures(horse.name) : null;
+
   const statsCards = [
     {
       label: "Top Speed",
@@ -260,6 +264,27 @@ export default function HorseProfilePage({
       unit: "",
       icon: null,
     },
+    // Pipeline-computed speed figures (only if pipeline has been run and horse has data)
+    ...(speedFigs ? [
+      {
+        label: "Speed Figure",
+        value: `${speedFigs.career_best.toFixed(0)}`,
+        unit: "career best",
+        icon: <BarChart3 className="h-4 w-4 text-[#b8941f]" />,
+      },
+      {
+        label: "Recent Figure",
+        value: `${speedFigs.recent_best.toFixed(0)}`,
+        unit: `best of last 3`,
+        icon: <BarChart3 className="h-4 w-4 text-[#b8941f]" />,
+      },
+      {
+        label: "Avg Figure",
+        value: `${speedFigs.avg_last_5.toFixed(0)}`,
+        unit: `last ${Math.min(5, speedFigs.num_races)} races`,
+        icon: null,
+      },
+    ] : []),
   ];
 
   return (

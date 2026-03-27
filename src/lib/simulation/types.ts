@@ -28,6 +28,8 @@ export interface SimConfig {
   surface: Surface;
   trackBias: TrackBias;
   numSimulations: number;
+  /** Optional injectable RNG — defaults to Math.random. Used for deterministic seeded races. */
+  random?: () => number;
 }
 
 export interface SingleRaceResult {

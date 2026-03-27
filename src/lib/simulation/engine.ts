@@ -1,39 +1,107 @@
 import type { SimConfig, SimResults, SingleRaceResult, HorseAggResult, SimHorse } from "./types";
 
-// Box-Muller normal distribution
-function normalRandom(mean: number, stdev: number): number {
-  const u1 = Math.random();
-  const u2 = Math.random();
-  const z = Math.sqrt(-2 * Math.log(u1 || 1e-10)) * Math.cos(2 * Math.PI * u2);
+// Box-Muller normal distribution — accepts injectable RNG
+function normalRandom(mean: number, stdev: number, random: () => number): number {
+  const u1 = random();
+  const u2 = random();
+  const z0 = Math.sqrt(-2 * Math.log(u1 || 1e-10)) * Math.cos(2 * Math.PI * u2);
+  const z = Math.max(-4, Math.min(4, z0)); // clamp to 4-sigma to prevent blowouts
   return mean + z * stdev;
+}
+
+// Trim post-finish deceleration artifacts from GPS speed curves.
+// Real GPS data often has a final gate where the horse pulls up (e.g., 13.9 ft/s)
+// which would unfairly penalize GPS-sourced horses in simulation.
+function trimDeceleration(curve: number[]): number[] {
+  if (curve.length < 3) return curve;
+  const last = curve[curve.length - 1];
+  const secondLast = curve[curve.length - 2];
+  // If the final point drops more than 2 ft/s below the previous, it's a pullup — trim it
+  if (secondLast - last > 2) {
+    return curve.slice(0, -1);
+  }
+  return curve;
 }
 
 // Resample speed curve to match race distance
 function resampleCurve(curve: number[], targetLen: number): number[] {
-  if (curve.length === targetLen) return [...curve];
+  const cleaned = trimDeceleration(curve);
+  if (cleaned.length === targetLen) return [...cleaned];
   const result: number[] = [];
   for (let i = 0; i < targetLen; i++) {
-    const srcIdx = (i / (targetLen - 1)) * (curve.length - 1);
+    const srcIdx = (i / (targetLen - 1)) * (cleaned.length - 1);
     const lo = Math.floor(srcIdx);
-    const hi = Math.min(lo + 1, curve.length - 1);
+    const hi = Math.min(lo + 1, cleaned.length - 1);
     const frac = srcIdx - lo;
-    result.push(curve[lo] * (1 - frac) + curve[hi] * frac);
+    result.push(cleaned[lo] * (1 - frac) + cleaned[hi] * frac);
   }
   return result;
 }
 
-function simulateOneRace(horses: SimHorse[], distF: number, surface: string, trackBias: string): SingleRaceResult {
+function simulateOneRace(horses: SimHorse[], distF: number, surface: string, trackBias: string, random: () => number): SingleRaceResult {
   const n = horses.length;
   const times: Record<string, number> = {};
   const gateSpeeds: Record<string, number[]> = {};
 
+  // Pre-compute field averages for relative comparisons
+  const fieldAvgSpeed = horses.reduce((s, h) => s + h.avgSpeed, 0) / n;
+
   for (const horse of horses) {
-    const baseCurve = resampleCurve(horse.speedCurve, distF);
+    const rawCurve = resampleCurve(horse.speedCurve, distF);
+
+    // --- GPS factor: calibrate curve to avgSpeed ---
+    // The speedCurve encodes the SHAPE (pacing pattern) of how the horse runs.
+    // But curves from different sources (handcrafted vs GPS-derived) can have different
+    // absolute levels. We normalize the curve so its mean matches the horse's avgSpeed,
+    // making avgSpeed the single source of truth for baseline ability.
+    const curveMean = rawCurve.reduce((a, b) => a + b, 0) / rawCurve.length;
+    const curveShift = horse.avgSpeed - curveMean;
+    const baseCurve = rawCurve.map(v => v + curveShift);
     const speeds: number[] = [];
 
+    // --- GPS factor: avgSpeed edge vs field (small competitive tiebreaker) ---
+    const speedEdge = (horse.avgSpeed - fieldAvgSpeed) * 0.12;
+
+    // --- GPS factor: stride efficiency as fatigue resistance ---
+    // Higher efficiency (typically 2.1-2.5) means less energy wasted per stride.
+    // Normalized around 2.25 — above = bonus in final third, below = penalty.
+    // Scale: 0.1 efficiency gap → ~0.03 ft/s max in final furlong.
+    const efficiencyRef = 2.25;
+    const efficiencyDelta = (horse.strideEfficiency - efficiencyRef) * 0.3;
+
+    // --- Traditional factor: age peak-performance curve ---
+    // Thoroughbreds peak at 4-5 years old. Small effect.
+    const ageFactor = horse.age !== undefined
+      ? -0.04 * Math.abs((horse.age ?? 4) - 4.5)
+      : 0;
+
+    // --- Traditional factor: experience from career wins ---
+    // More wins = slightly better race IQ (small, diminishing returns)
+    const experienceFactor = horse.careerWins !== undefined
+      ? Math.min(0.1, (horse.careerWins ?? 0) * 0.015)
+      : 0;
+
     for (let g = 0; g < distF; g++) {
-      let speed = normalRandom(baseCurve[g], horse.consistency);
+      let speed = normalRandom(baseCurve[g], horse.consistency, random);
       const progress = g / (distF - 1);
+
+      // --- GPS factor: avgSpeed edge (constant across race) ---
+      speed += speedEdge;
+
+      // --- GPS factor: topSpeed ceiling ---
+      // In the peak-effort zone (60-85% of race), the horse can tap into its topSpeed.
+      // This creates realistic "max gear" moments visible in GPS data.
+      // Scale: topSpeed 1.5 ft/s above curve point → ~0.12 ft/s boost.
+      if (progress >= 0.6 && progress <= 0.85) {
+        const topSpeedPull = (horse.topSpeed - baseCurve[g]) * 0.08;
+        if (topSpeedPull > 0) speed += topSpeedPull;
+      }
+
+      // --- GPS factor: stride efficiency as late-race fatigue resistance ---
+      // In the final third, efficient horses hold speed better.
+      if (progress > 0.65) {
+        speed += efficiencyDelta * (progress - 0.65) / 0.35; // ramps from 0 to full
+      }
 
       // Running style modifiers
       if (horse.runningStyle === "Front Runner") {
@@ -54,14 +122,13 @@ function simulateOneRace(horses: SimHorse[], distF: number, surface: string, tra
       // Surface preference (traditional factor)
       if (surface === "Turf") {
         if (horse.bestSurface === "Turf" || horse.bestSurface === "Both") {
-          speed -= 0.1; // slight natural turf slowdown, but horse handles it well
+          speed -= 0.1;
         } else {
-          speed -= 0.4; // dirt horse on turf = bigger penalty
+          speed -= 0.4;
         }
       } else {
-        // Dirt surface
         if (horse.bestSurface === "Turf") {
-          speed -= 0.2; // turf horse on dirt = mild penalty
+          speed -= 0.2;
         }
       }
 
@@ -69,16 +136,19 @@ function simulateOneRace(horses: SimHorse[], distF: number, surface: string, tra
       if (horse.bestDistance) {
         const bestDist = parseFloat(horse.bestDistance.replace("F", ""));
         const distDiff = Math.abs(bestDist - distF);
-        if (distDiff >= 3) speed -= 0.3;       // way outside comfort zone
-        else if (distDiff >= 2) speed -= 0.15;  // stretching
-        // within 1F = no penalty (comfortable range)
+        if (distDiff >= 3) speed -= 0.3;
+        else if (distDiff >= 2) speed -= 0.15;
       }
 
       // Recent form factor (traditional: improving vs declining)
       if (horse.recentFormAvg !== undefined) {
-        if (horse.recentFormAvg <= 2.5) speed += 0.15;      // in top form
-        else if (horse.recentFormAvg >= 6) speed -= 0.15;    // poor recent form
+        if (horse.recentFormAvg <= 2.5) speed += 0.15;
+        else if (horse.recentFormAvg >= 6) speed -= 0.15;
       }
+
+      // Age and experience (traditional factors)
+      speed += ageFactor;
+      speed += experienceFactor;
 
       // Clamp to reasonable range
       speed = Math.max(12, Math.min(21, speed));
@@ -116,7 +186,7 @@ function formatOdds(winPct: number): string {
 }
 
 export function runMonteCarlo(config: SimConfig): SimResults {
-  const { horses, distanceFurlongs, surface, trackBias, numSimulations } = config;
+  const { horses, distanceFurlongs, surface, trackBias, numSimulations, random = Math.random } = config;
   const n = horses.length;
 
   // Initialize counters
@@ -138,7 +208,7 @@ export function runMonteCarlo(config: SimConfig): SimResults {
   const orderCounts: Record<string, number> = {};
 
   for (let i = 0; i < numSimulations; i++) {
-    const result = simulateOneRace(horses, distanceFurlongs, surface, trackBias);
+    const result = simulateOneRace(horses, distanceFurlongs, surface, trackBias, random);
 
     // Only store first 100 races for replay (memory)
     if (i < 100) allRaces.push(result);

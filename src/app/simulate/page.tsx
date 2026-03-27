@@ -32,6 +32,8 @@ import {
 import { ALL_PROFILES, getProfile } from "@/lib/data/horse-profiles";
 import { ALL_RACES } from "@/lib/data/race-data";
 import { runMonteCarlo, simToReplayData } from "@/lib/simulation/engine";
+import { profileToSim } from "@/lib/simulation/helpers";
+import { PIPELINE_ACTIVE, MODEL_DIAGNOSTICS, TRANSFER_DIAGNOSTICS } from "@/lib/data/pipeline-output";
 import type {
   SimHorse,
   SimResults,
@@ -76,43 +78,6 @@ const DISTANCE_OPTIONS = [
 
 const LIVE_SIM_COUNT = 500;
 const DEEP_SIM_COUNT = 1000;
-
-/* ================================================================== */
-/*  Helper: convert profile horse -> SimHorse                          */
-/* ================================================================== */
-
-function profileToSim(
-  profile: (typeof ALL_PROFILES)[number],
-  postPosition: number
-): SimHorse {
-  const finishes = profile.recentForm.map((r) => r.finish);
-  const mean = finishes.reduce((a, b) => a + b, 0) / finishes.length;
-  const variance =
-    finishes.reduce((a, f) => a + (f - mean) ** 2, 0) / finishes.length;
-  const stdev = Math.sqrt(variance);
-  const consistency = stdev < 1.5 ? 0.3 : stdev < 2.5 ? 0.5 : 0.8;
-
-  const recentFormAvg = finishes.length > 0 ? mean : undefined;
-
-  return {
-    name: profile.name,
-    color: profile.color,
-    imageUrl: profile.imageUrl,
-    speedCurve: profile.speedCurve,
-    topSpeed: profile.topSpeed,
-    avgSpeed: profile.avgSpeed,
-    strideEfficiency: profile.strideEfficiency,
-    runningStyle: profile.runningStyle,
-    consistency,
-    postPosition,
-    isCustom: false,
-    bestDistance: profile.bestDistance,
-    bestSurface: profile.bestSurface,
-    recentFormAvg,
-    careerWins: profile.wins,
-    age: profile.age,
-  };
-}
 
 /* ================================================================== */
 /*  Helper: generate speed curve for custom horse                      */
@@ -397,10 +362,10 @@ function SimulatePageInner() {
       selectedHorses.filter((h) => h.isCustom).length % CUSTOM_COLORS.length;
     const consistencyVal =
       customConsistency === "Low"
-        ? 0.3
+        ? 0.25
         : customConsistency === "High"
-          ? 0.8
-          : 0.5;
+          ? 0.7
+          : 0.45;
 
     const horse: SimHorse = {
       name: customName.trim(),
@@ -638,6 +603,34 @@ function SimulatePageInner() {
             Build a race, see live odds, watch it run
           </p>
         </div>
+
+        {/* Pipeline model stats — shown when pipeline has been run */}
+        {PIPELINE_ACTIVE && (
+          <div
+            className="mb-4 rounded-xl px-5 py-3 flex flex-wrap items-center gap-4"
+            style={{ backgroundColor: "#1a3a2a08", border: "1px solid #1a3a2a20" }}
+          >
+            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#1a3a2a" }}>
+              Powered by
+            </span>
+            <span className="text-xs font-mono">
+              <span style={{ color: TEXT_SEC }}>Model R²:</span>{" "}
+              <span className="font-bold" style={{ color: TEXT }}>{MODEL_DIAGNOSTICS.ensemble.r2_val.toFixed(3)}</span>
+            </span>
+            <span className="text-xs font-mono">
+              <span style={{ color: TEXT_SEC }}>MAE:</span>{" "}
+              <span className="font-bold" style={{ color: TEXT }}>{MODEL_DIAGNOSTICS.ensemble.mae_val.toFixed(2)}</span>
+            </span>
+            <span className="text-xs font-mono">
+              <span style={{ color: TEXT_SEC }}>Top feature:</span>{" "}
+              <span style={{ color: GOLD }}>{Object.entries(MODEL_DIAGNOSTICS.ridge.feature_importance).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "N/A"}</span>
+            </span>
+            <span className="text-xs font-mono">
+              <span style={{ color: TEXT_SEC }}>Transfer R²:</span>{" "}
+              <span className="font-bold" style={{ color: TEXT }}>{TRANSFER_DIAGNOSTICS.overall_r2.toFixed(3)}</span>
+            </span>
+          </div>
+        )}
 
         {/* How does this work? */}
         <div
