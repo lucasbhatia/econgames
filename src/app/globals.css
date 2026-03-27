@@ -115,7 +115,7 @@
 
 /* Gold gradient text */
 .text-gradient-gold {
-  background: linear-gradient(135deg, #b8941f 0%, #c9a84c 50%, #b8941f 100%);
+  background: linear-gradient(135deg, #f5c842 0%, #f0d060 50%, #f5c842 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -123,10 +123,61 @@
 
 /* Gold glow */
 .glow-gold {
-  box-shadow: 0 0 20px #b8941f20, 0 0 60px #b8941f10;
+  box-shadow: 0 0 20px rgba(245, 200, 66, 0.15), 0 0 60px rgba(245, 200, 66, 0.08);
 }
 
-/* Scrollbar */
+/* ── Premium Sportsbook Animations ── */
+
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+@keyframes gold-shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes countdown-tick {
+  0% { transform: scale(1); }
+  10% { transform: scale(1.08); }
+  30% { transform: scale(1); }
+}
+
+@keyframes glow-trail {
+  0% { opacity: 0.8; filter: blur(2px); }
+  100% { opacity: 0; filter: blur(6px); }
+}
+
+@keyframes confetti-burst {
+  0% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
+  100% { transform: translate(var(--tx), var(--ty)) rotate(var(--rot)) scale(0); opacity: 0; }
+}
+
+@keyframes stepper-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 200, 66, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(245, 200, 66, 0); }
+}
+
+.animate-pulse-live {
+  animation: pulse-live 1.2s ease-in-out infinite;
+}
+
+.animate-gold-shimmer {
+  background: linear-gradient(90deg, transparent 0%, rgba(245, 200, 66, 0.15) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: gold-shimmer 2.5s ease-in-out infinite;
+}
+
+.animate-countdown-tick {
+  animation: countdown-tick 1s ease-out;
+}
+
+.animate-stepper-pulse {
+  animation: stepper-pulse 2s ease-in-out infinite;
+}
+
+/* Scrollbar — dark theme */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -135,9 +186,9 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d1cdc4;
+  background: #2d333b;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #b8b3a8;
+  background: #444c56;
 }

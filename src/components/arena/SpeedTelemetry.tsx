@@ -61,8 +61,8 @@ function TelemetryTooltip({
       className="rounded-lg border px-4 py-3"
       style={{
         backgroundColor: "#ffffff",
-        borderColor: "#e5e2db",
-        color: "#1a1a2a",
+        borderColor: "#21262d",
+        color: "#e6edf3",
         boxShadow: "0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04)",
       }}
     >
@@ -89,7 +89,7 @@ function TelemetryTooltip({
                 <span style={{ color: "#374151" }}>{entry.name}</span>
               </span>
               <span className="flex items-center gap-3">
-                <span className="font-mono font-semibold" style={{ color: "#1a1a2a" }}>
+                <span className="font-mono font-semibold" style={{ color: "#e6edf3" }}>
                   {entry.value.toFixed(1)} ft/s
                 </span>
                 {diff < 0 && (
@@ -103,7 +103,7 @@ function TelemetryTooltip({
         })}
       </div>
       {payload.length >= 2 && (
-        <div className="mt-2 pt-2" style={{ borderTop: "1px solid #e5e2db" }}>
+        <div className="mt-2 pt-2" style={{ borderTop: "1px solid #21262d" }}>
           <div className="flex items-center justify-between" style={{ fontSize: 13 }}>
             <span className="uppercase tracking-wider" style={{ color: "#9ca3af" }}>
               Delta
@@ -323,14 +323,14 @@ export default function SpeedTelemetry({
       className="relative w-full rounded-xl p-5"
       style={{
         backgroundColor: "#ffffff",
-        border: "1px solid #e5e2db",
+        border: "1px solid #21262d",
       }}
     >
       {/* ---- Header ---- */}
       <div className="mb-4">
         <h3
           className="font-bold uppercase tracking-[0.2em]"
-          style={{ fontSize: 14, color: "#1a1a2a" }}
+          style={{ fontSize: 14, color: "#e6edf3" }}
         >
           Speed Telemetry
         </h3>
@@ -366,7 +366,7 @@ export default function SpeedTelemetry({
             </defs>
 
             <CartesianGrid
-              stroke="#e5e2db"
+              stroke="#21262d"
               strokeDasharray="4 6"
               vertical={false}
             />
@@ -374,7 +374,7 @@ export default function SpeedTelemetry({
             <XAxis
               dataKey="gate"
               tick={{ fill: "#6b7280", fontSize: 12, fontFamily: "monospace" }}
-              axisLine={{ stroke: "#e5e2db" }}
+              axisLine={{ stroke: "#21262d" }}
               tickLine={false}
               label={{
                 value: "Distance (furlongs)",
@@ -390,7 +390,7 @@ export default function SpeedTelemetry({
             <YAxis
               domain={[yMin, yMax]}
               tick={{ fill: "#6b7280", fontSize: 12, fontFamily: "monospace" }}
-              axisLine={{ stroke: "#e5e2db" }}
+              axisLine={{ stroke: "#21262d" }}
               tickLine={false}
               label={{
                 value: "Speed (ft/s)",
@@ -493,7 +493,7 @@ export default function SpeedTelemetry({
           transition={{ delay: 0.5, duration: 0.4 }}
           className="mt-4 flex items-center gap-3 rounded-lg px-4 py-2.5"
           style={{
-            border: "1px solid #e5e2db",
+            border: "1px solid #21262d",
             backgroundColor: "#fafaf8",
           }}
         >
@@ -504,7 +504,7 @@ export default function SpeedTelemetry({
             G{keyMomentGate}
           </span>
           <p className="leading-relaxed" style={{ fontSize: 13, color: "#6b7280" }}>
-            <span className="font-semibold" style={{ color: "#1a1a2a" }}>
+            <span className="font-semibold" style={{ color: "#e6edf3" }}>
               {horses[winnerIdx]?.name}
             </span>{" "}
             first took the speed lead at{" "}

@@ -42,20 +42,20 @@ import type { LeaderboardEntry, SchoolStanding } from "@/lib/supabase/useLeaderb
 /*  Constants                                                          */
 /* ================================================================== */
 
-const GOLD = "#b8941f";
-const GOLD_LIGHT = "#d4b84a";
-const BG_WHITE = "#ffffff";
-const BG_CARD = "#f8f6f2";
-const BG_DARK = "#1a1a2a";
-const TEXT = "#1a1a2a";
-const TEXT_SEC = "#6b7280";
-const TEXT_MUTED = "#9ca3af";
-const BORDER = "#e5e2db";
-const GREEN = "#16a34a";
-const RED = "#dc2626";
-const BLUE = "#2563eb";
-const PURPLE = "#7c3aed";
-const ORANGE = "#ea580c";
+const GOLD = "#f5c842";
+const GOLD_LIGHT = "#f0d060";
+const BG_WHITE = "#0d1117";
+const BG_CARD = "#161b22";
+const BG_DARK = "#0d1117";
+const TEXT = "#e6edf3";
+const TEXT_SEC = "#8b949e";
+const TEXT_MUTED = "#484f58";
+const BORDER = "#21262d";
+const GREEN = "#3fb950";
+const RED = "#f85149";
+const BLUE = "#58a6ff";
+const PURPLE = "#bc8cff";
+const ORANGE = "#d29922";
 
 const RACE_COLORS = [
   "#c9a84c", "#e74c3c", "#3498db", "#2ecc71", "#9b59b6",
@@ -614,7 +614,7 @@ function TimerRing({ seconds, total, phase, label }: { seconds: number; total: n
   return (
     <div className="relative w-[88px] h-[88px] flex items-center justify-center">
       <svg width="88" height="88" className="absolute -rotate-90">
-        <circle cx="44" cy="44" r={radius} fill="none" stroke={`${BORDER}`} strokeWidth="3.5" />
+        <circle cx="44" cy="44" r={radius} fill="none" stroke={BORDER} strokeWidth="3.5" />
         <motion.circle
           cx="44" cy="44" r={radius} fill="none"
           stroke={isUrgent ? RED : color} strokeWidth="3.5"
@@ -628,7 +628,7 @@ function TimerRing({ seconds, total, phase, label }: { seconds: number; total: n
       <div className="text-center z-10">
         <div
           className="text-lg font-mono font-bold"
-          style={{ color: isUrgent ? RED : TEXT }}
+          style={{ color: isUrgent ? RED : "#e6edf3" }}
         >
           {formatTimer(seconds)}
         </div>
@@ -669,27 +669,27 @@ function NameEntryModal({ onSubmit }: { onSubmit: (name: string, school: string)
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(26,26,42,0.85)", backdropFilter: "blur(8px)" }}
+      style={{ background: "rgba(1,4,9,0.9)", backdropFilter: "blur(12px)" }}
     >
       <motion.div
         initial={{ scale: 0.9, y: 20 }}
         animate={{ scale: 1, y: 0 }}
         transition={{ type: "spring", damping: 25 }}
         className="w-full max-w-md p-8 rounded-3xl space-y-6"
-        style={{ background: BG_WHITE, border: `2px solid ${BORDER}` }}
+        style={{ background: BG_CARD, border: `1px solid ${BORDER}`, boxShadow: `0 0 60px rgba(245,200,66,0.08)` }}
       >
         <div className="text-center space-y-2">
           <div
             className="w-16 h-16 mx-auto rounded-2xl flex items-center justify-center mb-4"
-            style={{ background: `${GOLD}15` }}
+            style={{ background: `${GOLD}15`, border: `1px solid ${GOLD}30` }}
           >
             <Zap className="w-8 h-8" style={{ color: GOLD }} />
           </div>
-          <h2 className="text-2xl font-bold" style={{ color: TEXT }}>
+          <h2 className="text-2xl font-bold" style={{ color: "#fff" }}>
             Welcome to Race Night
           </h2>
           <p className="text-sm" style={{ color: TEXT_SEC }}>
-            $1,000 bankroll. New race every 7 minutes. Compete against other schools.
+            $1,000 bankroll. New race every 6 minutes. Compete against other schools.
           </p>
         </div>
 
@@ -706,9 +706,9 @@ function NameEntryModal({ onSubmit }: { onSubmit: (name: string, school: string)
               maxLength={20}
               className="w-full px-4 py-3 rounded-xl text-sm font-medium outline-none transition-all"
               style={{
-                background: BG_CARD,
+                background: BG_DARK,
                 border: `2px solid ${name.trim().length >= 2 ? GOLD : BORDER}`,
-                color: TEXT,
+                color: "#fff",
               }}
             />
           </div>
@@ -720,9 +720,9 @@ function NameEntryModal({ onSubmit }: { onSubmit: (name: string, school: string)
               onChange={(e) => setSchool(e.target.value)}
               className="w-full px-4 py-3 rounded-xl text-sm font-medium outline-none transition-all appearance-none cursor-pointer"
               style={{
-                background: BG_CARD,
+                background: BG_DARK,
                 border: `2px solid ${school ? GOLD : BORDER}`,
-                color: school ? TEXT : TEXT_MUTED,
+                color: school ? "#fff" : TEXT_MUTED,
               }}
             >
               <option value="">Select your school...</option>
@@ -735,9 +735,10 @@ function NameEntryModal({ onSubmit }: { onSubmit: (name: string, school: string)
           <button
             onClick={handleSubmit}
             disabled={!isValid}
-            className="w-full py-3.5 rounded-xl text-base font-bold text-white transition-all"
+            className="w-full py-3.5 rounded-xl text-base font-bold transition-all"
             style={{
               background: isValid ? GOLD : BORDER,
+              color: isValid ? "#0d1117" : TEXT_MUTED,
               opacity: isValid ? 1 : 0.5,
             }}
           >
@@ -895,7 +896,7 @@ function BetSlipBuilder({
       </AnimatePresence>
 
       {/* Bet type description */}
-      <div className="px-3 py-2 rounded-lg text-[11px]" style={{ background: `${GOLD}06`, border: `1px solid ${GOLD}20`, color: TEXT_SEC }}>
+      <div className="px-3 py-2 rounded-lg text-[11px]" style={{ background: `${GOLD}08`, border: `1px solid ${GOLD}25`, color: TEXT_SEC }}>
         <span className="font-semibold" style={{ color: GOLD }}>{config.label}:</span> {config.description}
         {combos > 1 && (
           <span className="ml-1 font-mono" style={{ color: PURPLE }}>({combos} combos = ${amount} {"×"} {combos} = ${totalCost})</span>
@@ -916,7 +917,7 @@ function BetSlipBuilder({
               onClick={() => handleHorseSelect(horse.name)}
               className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-all text-left group"
               style={{
-                background: isSelected ? `${GOLD}08` : BG_WHITE,
+                background: isSelected ? `${GOLD}10` : BG_CARD,
                 border: `1.5px solid ${isSelected ? GOLD : BORDER}`,
               }}
             >
@@ -930,17 +931,17 @@ function BetSlipBuilder({
                   </div>
                 )}
                 {config.picks > 1 && isSelected && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white text-[10px] font-bold">
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-white text-[10px] font-bold">
                     {isKey && orderIdx === 0 ? "K" : orderIdx + 1}
                   </div>
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold truncate" style={{ color: TEXT }}>
+                <div className="text-sm font-semibold truncate" style={{ color: "#e6edf3" }}>
                   #{i + 1} {horse.name}
                 </div>
-                <div className="flex items-center gap-1.5 text-[10px]" style={{ color: TEXT_MUTED }}>
-                  <span className="px-1.5 py-0.5 rounded" style={{ background: `${horse.color}12`, color: horse.color, fontWeight: 600 }}>
+                <div className="flex items-center gap-1.5 text-[10px]" style={{ color: TEXT_SEC }}>
+                  <span className="px-1.5 py-0.5 rounded" style={{ background: `${horse.color}18`, color: horse.color, fontWeight: 600 }}>
                     {horse.runningStyle}
                   </span>
                   <span>{horse.topSpeed.toFixed(1)} ft/s</span>
@@ -1088,7 +1089,7 @@ function PostParadeOverlay({ race, timer }: { race: RaceCard; timer: number }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className="rounded-2xl overflow-hidden"
-      style={{ background: BG_DARK }}
+      style={{ background: BG_DARK, border: `1px solid ${BORDER}` }}
     >
       <div className="px-6 py-8 text-center space-y-4">
         {/* Gate loading animation */}
@@ -1103,7 +1104,7 @@ function PostParadeOverlay({ race, timer }: { race: RaceCard; timer: number }) {
           <h2 className="text-2xl font-bold text-white">
             {race.name}
           </h2>
-          <div className="text-sm text-white/60">
+          <div className="text-sm" style={{ color: TEXT_SEC }}>
             {race.track.name} {"·"} {race.distance}F {race.surface} {"·"} {race.condition}
           </div>
         </motion.div>
@@ -1117,31 +1118,32 @@ function PostParadeOverlay({ race, timer }: { race: RaceCard; timer: number }) {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.15 }}
               className="flex items-center gap-2 px-3 py-2 rounded-lg"
-              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}
+              style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}
             >
               <div
-                className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
-                style={{ background: horse.color }}
+                className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
+                style={{ background: horse.color, color: "#0d1117" }}
               >
                 {i + 1}
               </div>
               <span className="text-xs font-medium text-white truncate">
                 {horse.name}
               </span>
+              <div className="ml-auto w-1.5 h-1.5 rounded-full animate-pulse-live" style={{ background: GOLD }} />
             </motion.div>
           ))}
         </div>
 
         {/* Countdown */}
-        <motion.div
-          className="mt-6"
-          animate={{ opacity: [0.5, 1, 0.5] }}
-          transition={{ repeat: Infinity, duration: 1.5 }}
-        >
-          <div className="text-4xl font-mono font-bold" style={{ color: GOLD }}>
+        <motion.div className="mt-6">
+          <motion.div
+            key={timer}
+            className="text-5xl font-mono font-bold animate-countdown-tick"
+            style={{ color: GOLD, textShadow: `0 0 30px ${GOLD}40` }}
+          >
             {timer}
-          </div>
-          <div className="text-xs text-white/40 uppercase tracking-wider mt-1">
+          </motion.div>
+          <div className="text-xs uppercase tracking-wider mt-1" style={{ color: TEXT_MUTED }}>
             seconds to post
           </div>
         </motion.div>
@@ -1161,11 +1163,11 @@ function WinCelebration({ winnerName, totalWinnings }: { winnerName: string; tot
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.8 }}
       className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl"
-      style={{ background: "rgba(26,26,42,0.9)", backdropFilter: "blur(4px)" }}
+      style={{ background: "rgba(1,4,9,0.92)", backdropFilter: "blur(8px)" }}
     >
       <div className="text-center space-y-3">
-        {/* Confetti particles */}
-        {Array.from({ length: 20 }).map((_, i) => (
+        {/* Gold confetti particles */}
+        {Array.from({ length: 24 }).map((_, i) => (
           <motion.div
             key={i}
             initial={{
@@ -1175,19 +1177,19 @@ function WinCelebration({ winnerName, totalWinnings }: { winnerName: string; tot
               rotate: 0,
             }}
             animate={{
-              x: (Math.random() - 0.5) * 300,
-              y: (Math.random() - 0.5) * 200 - 100,
+              x: (Math.random() - 0.5) * 350,
+              y: (Math.random() - 0.5) * 250 - 100,
               scale: [0, 1, 0],
               rotate: Math.random() * 720,
             }}
             transition={{
-              duration: 2,
-              delay: Math.random() * 0.3,
+              duration: 2.5,
+              delay: Math.random() * 0.4,
               ease: "easeOut",
             }}
             className="absolute w-2 h-2 rounded-sm"
             style={{
-              background: [GOLD, GREEN, "#e74c3c", "#3498db", "#9b59b6", "#f39c12"][i % 6],
+              background: [GOLD, "#f0d060", GREEN, BLUE, PURPLE, "#fff"][i % 6],
               left: "50%",
               top: "50%",
             }}
@@ -1265,39 +1267,40 @@ function ResultsPanel({
         <h3 className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: TEXT_SEC }}>
           Official Results
         </h3>
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           {finishOrder.slice(0, 5).map((name, i) => {
             const horse = race.horses.find((h) => h.name === name);
-            const badgeColors = [GOLD, "#94a3b8", "#b45309", TEXT_MUTED, TEXT_MUTED];
+            const badgeColors = [GOLD, "#c0c0c0", "#cd7f32", TEXT_MUTED, TEXT_MUTED];
+            const isWinner = i === 0;
             return (
               <motion.div
                 key={name}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.12 }}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-lg"
+                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg ${isWinner ? "animate-gold-shimmer" : ""}`}
                 style={{
-                  background: i === 0 ? `${GOLD}10` : BG_WHITE,
-                  border: `1.5px solid ${i === 0 ? GOLD : BORDER}`,
+                  background: isWinner ? `${GOLD}12` : BG_CARD,
+                  border: `1.5px solid ${isWinner ? GOLD : BORDER}`,
                 }}
               >
                 <div
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
-                  style={{ background: badgeColors[i] }}
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
+                  style={{ background: badgeColors[i], color: i < 3 ? "#0d1117" : "#fff" }}
                 >
                   {i + 1}
                 </div>
                 <div
-                  className="w-2.5 h-2.5 rounded-full shrink-0"
-                  style={{ background: horse?.color ?? TEXT_MUTED }}
+                  className="w-3 h-3 rounded-full shrink-0"
+                  style={{ background: horse?.color ?? TEXT_MUTED, boxShadow: `0 0 6px ${horse?.color ?? TEXT_MUTED}50` }}
                 />
-                <span className="text-sm font-bold flex-1 truncate" style={{ color: TEXT }}>
+                <span className="text-sm font-bold flex-1 truncate" style={{ color: isWinner ? GOLD : "#e6edf3" }}>
                   {name}
                 </span>
-                <span className="text-xs font-mono" style={{ color: TEXT_MUTED }}>
+                <span className="text-[11px] font-mono px-2 py-0.5 rounded-full" style={{ background: `${GOLD}10`, color: GOLD }}>
                   {formatOddsDisplay(race.odds[name]?.win ?? 2)}
                 </span>
-                {i === 0 && <Trophy className="w-3.5 h-3.5 shrink-0" style={{ color: GOLD }} />}
+                {isWinner && <Trophy className="w-4 h-4 shrink-0" style={{ color: GOLD }} />}
               </motion.div>
             );
           })}
@@ -1399,8 +1402,10 @@ function ResultsPanel({
       )}
 
       {betResults.length === 0 && (
-        <div className="text-center py-4 rounded-lg" style={{ background: BG_CARD }}>
-          <p className="text-xs" style={{ color: TEXT_MUTED }}>No bets placed this race</p>
+        <div className="text-center py-6 rounded-xl" style={{ background: BG_CARD, border: `1px dashed ${BORDER}` }}>
+          <Ticket className="w-5 h-5 mx-auto mb-2" style={{ color: TEXT_MUTED }} />
+          <p className="text-xs font-medium" style={{ color: TEXT_MUTED }}>No bets placed this race</p>
+          <p className="text-[10px] mt-1" style={{ color: TEXT_MUTED }}>Place bets during the betting phase</p>
         </div>
       )}
     </div>
@@ -1413,64 +1418,70 @@ function ResultsPanel({
 
 function UserStats({ user }: { user: UserProfile }) {
   const profit = user.bankroll - user.startingBankroll;
-  const roi = user.startingBankroll > 0 ? (profit / user.startingBankroll) * 100 : 0;
 
   return (
     <div className="space-y-3">
+      {/* Player card */}
       <div className="flex items-center gap-3">
         <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold text-white"
-          style={{ background: GOLD }}
+          className="w-11 h-11 rounded-full flex items-center justify-center text-lg font-bold"
+          style={{ background: `${GOLD}20`, color: GOLD, border: `2px solid ${GOLD}40` }}
         >
           {user.name.charAt(0).toUpperCase()}
         </div>
         <div className="flex-1">
-          <div className="text-sm font-bold" style={{ color: TEXT }}>{user.name}</div>
-          <div className="text-[11px]" style={{ color: TEXT_MUTED }}>
+          <div className="text-sm font-bold" style={{ color: "#fff" }}>{user.name}</div>
+          <div className="text-[11px]" style={{ color: TEXT_SEC }}>
             {user.school && <>{user.school} · </>}{user.racesPlayed} race{user.racesPlayed !== 1 ? "s" : ""}
           </div>
         </div>
       </div>
 
+      {/* 3-column mini-dashboard with icons */}
       <div className="grid grid-cols-3 gap-2">
-        <div className="p-2.5 rounded-lg text-center" style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}>
-          <div className="text-[10px] font-semibold uppercase" style={{ color: TEXT_MUTED }}>Bankroll</div>
-          <div className="text-sm font-bold font-mono mt-0.5" style={{ color: TEXT }}>
+        <div className="p-2.5 rounded-xl text-center" style={{ background: BG_DARK, border: `1px solid ${BORDER}` }}>
+          <DollarSign className="w-3.5 h-3.5 mx-auto mb-1" style={{ color: GOLD }} />
+          <div className="text-[9px] font-semibold uppercase tracking-wider" style={{ color: TEXT_MUTED }}>Bankroll</div>
+          <div className="text-sm font-bold font-mono mt-0.5" style={{ color: GOLD }}>
             <AnimatedBalance value={user.bankroll} />
           </div>
         </div>
-        <div className="p-2.5 rounded-lg text-center" style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}>
-          <div className="text-[10px] font-semibold uppercase" style={{ color: TEXT_MUTED }}>Profit</div>
+        <div className="p-2.5 rounded-xl text-center" style={{ background: BG_DARK, border: `1px solid ${BORDER}` }}>
+          <TrendingUp className="w-3.5 h-3.5 mx-auto mb-1" style={{ color: profit >= 0 ? GREEN : RED }} />
+          <div className="text-[9px] font-semibold uppercase tracking-wider" style={{ color: TEXT_MUTED }}>Profit</div>
           <div className="text-sm font-bold font-mono mt-0.5" style={{ color: profit >= 0 ? GREEN : RED }}>
             {profit >= 0 ? "+" : ""}{profit}
           </div>
         </div>
-        <div className="p-2.5 rounded-lg text-center" style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}>
-          <div className="text-[10px] font-semibold uppercase" style={{ color: TEXT_MUTED }}>Best Win</div>
+        <div className="p-2.5 rounded-xl text-center" style={{ background: BG_DARK, border: `1px solid ${BORDER}` }}>
+          <Trophy className="w-3.5 h-3.5 mx-auto mb-1" style={{ color: GOLD }} />
+          <div className="text-[9px] font-semibold uppercase tracking-wider" style={{ color: TEXT_MUTED }}>Best Win</div>
           <div className="text-sm font-bold font-mono mt-0.5" style={{ color: GOLD }}>
             ${user.biggestWin}
           </div>
         </div>
       </div>
 
-      {/* Race history sparkline */}
+      {/* Race history as color-coded win/loss pills */}
       {user.history.length > 0 && (
         <div>
-          <div className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: TEXT_MUTED }}>
+          <div className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: TEXT_SEC }}>
             Recent Races
           </div>
-          <div className="flex gap-0.5">
+          <div className="flex gap-1 flex-wrap">
             {user.history.slice(-20).map((h, i) => (
               <div
                 key={i}
-                className="flex-1 rounded-sm"
+                className="rounded-full px-1.5 py-0.5 text-[9px] font-mono font-bold"
                 style={{
-                  height: `${Math.max(4, Math.min(24, Math.abs(h.profit) / 5 + 4))}px`,
-                  background: h.profit >= 0 ? GREEN : RED,
-                  opacity: 0.3 + (i / 20) * 0.7,
+                  background: h.profit > 0 ? `${GREEN}18` : h.profit < 0 ? `${RED}15` : `${TEXT_MUTED}15`,
+                  color: h.profit > 0 ? GREEN : h.profit < 0 ? RED : TEXT_MUTED,
+                  border: `1px solid ${h.profit > 0 ? `${GREEN}30` : h.profit < 0 ? `${RED}25` : BORDER}`,
                 }}
                 title={`Race: ${h.profit >= 0 ? "+" : ""}${h.profit}`}
-              />
+              >
+                {h.profit > 0 ? `+${h.profit}` : h.profit < 0 ? h.profit : "0"}
+              </div>
             ))}
           </div>
         </div>
@@ -1523,23 +1534,24 @@ function SharedLeaderboard({
           Leaderboard
         </span>
         {connected && (
-          <span className="ml-auto flex items-center gap-1 text-[9px]" style={{ color: GREEN }}>
+          <span className="ml-auto flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full"
+            style={{ background: `${GREEN}15`, color: GREEN, border: `1px solid ${GREEN}30` }}>
             <CircleDot className="w-2 h-2" /> Live
           </span>
         )}
       </div>
 
-      {/* Tab switch */}
-      <div className="flex gap-1 p-0.5 rounded-lg" style={{ background: BG_CARD }}>
+      {/* Pill tab switch */}
+      <div className="flex gap-1 p-1 rounded-xl" style={{ background: BG_DARK, border: `1px solid ${BORDER}` }}>
         {(["players", "schools"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className="flex-1 py-1.5 rounded-md text-[11px] font-semibold capitalize transition-all"
+            className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold capitalize transition-all"
             style={{
-              background: tab === t ? BG_WHITE : "transparent",
-              color: tab === t ? TEXT : TEXT_MUTED,
-              boxShadow: tab === t ? "0 1px 3px rgba(0,0,0,0.06)" : "none",
+              background: tab === t ? `${GOLD}15` : "transparent",
+              color: tab === t ? GOLD : TEXT_MUTED,
+              border: tab === t ? `1px solid ${GOLD}30` : "1px solid transparent",
             }}
           >
             {t}
@@ -1563,21 +1575,28 @@ function SharedLeaderboard({
                 layout
                 className="flex items-center gap-2 px-2.5 py-2 rounded-lg transition-all"
                 style={{
-                  background: isYou ? `${GOLD}06` : BG_WHITE,
+                  background: isYou ? `${GOLD}08` : BG_CARD,
                   border: `1px solid ${isYou ? GOLD : BORDER}`,
+                  borderLeft: isYou ? `3px solid ${GOLD}` : undefined,
                 }}
               >
                 <div
                   className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
                   style={{
-                    background: i === 0 ? `${GOLD}20` : i < 3 ? `${TEXT_MUTED}10` : "transparent",
-                    color: i === 0 ? GOLD : TEXT_MUTED,
+                    background: i === 0 ? `${GOLD}20` : i < 3 ? `${TEXT_MUTED}15` : "transparent",
+                    color: i === 0 ? GOLD : TEXT_SEC,
                   }}
                 >
                   {i < 3 ? <Icon className="w-2.5 h-2.5" /> : <span className="text-[9px] font-mono">{i + 1}</span>}
                 </div>
+                <div
+                  className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[9px] font-bold"
+                  style={{ background: `${GOLD}15`, color: GOLD }}
+                >
+                  {entry.name.charAt(0).toUpperCase()}
+                </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-[11px] font-bold truncate" style={{ color: TEXT }}>
+                  <div className="text-[11px] font-bold truncate" style={{ color: "#e6edf3" }}>
                     {entry.name} {isYou && <span className="text-[9px] font-normal" style={{ color: GOLD }}>(you)</span>}
                   </div>
                   <div className="text-[9px] truncate" style={{ color: TEXT_MUTED }}>
@@ -1585,10 +1604,14 @@ function SharedLeaderboard({
                   </div>
                 </div>
                 <div className="text-right shrink-0">
-                  <div className="text-[11px] font-bold font-mono" style={{ color: TEXT }}>
+                  <div className="text-[11px] font-bold font-mono" style={{ color: GOLD }}>
                     ${Math.round(entry.bankroll).toLocaleString()}
                   </div>
-                  <div className="text-[9px] font-mono" style={{ color: profit >= 0 ? GREEN : RED }}>
+                  <div className="text-[9px] font-mono px-1.5 py-0.5 rounded-full"
+                    style={{
+                      background: profit >= 0 ? `${GREEN}12` : `${RED}12`,
+                      color: profit >= 0 ? GREEN : RED,
+                    }}>
                     {profit >= 0 ? "+" : ""}{Math.round(profit)}
                   </div>
                 </div>
@@ -1608,21 +1631,21 @@ function SharedLeaderboard({
               key={school.school}
               layout
               className="px-2.5 py-2.5 rounded-lg"
-              style={{ background: BG_WHITE, border: `1px solid ${BORDER}` }}
+              style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 min-w-0">
                   <div
                     className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[9px] font-bold"
                     style={{
-                      background: i === 0 ? `${GOLD}20` : i < 3 ? `${TEXT_MUTED}10` : BG_CARD,
-                      color: i === 0 ? GOLD : TEXT_MUTED,
+                      background: i === 0 ? `${GOLD}20` : i < 3 ? `${TEXT_MUTED}15` : BG_DARK,
+                      color: i === 0 ? GOLD : TEXT_SEC,
                     }}
                   >
                     {i + 1}
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[11px] font-bold truncate" style={{ color: TEXT }}>
+                    <div className="text-[11px] font-bold truncate" style={{ color: "#e6edf3" }}>
                       {school.school}
                     </div>
                     <div className="text-[9px]" style={{ color: TEXT_MUTED }}>
@@ -1631,10 +1654,14 @@ function SharedLeaderboard({
                   </div>
                 </div>
                 <div className="text-right shrink-0 ml-2">
-                  <div className="text-[11px] font-bold font-mono" style={{ color: school.totalProfit >= 0 ? GREEN : RED }}>
+                  <div className="text-[11px] font-bold font-mono px-1.5 py-0.5 rounded-full"
+                    style={{
+                      background: school.totalProfit >= 0 ? `${GREEN}12` : `${RED}12`,
+                      color: school.totalProfit >= 0 ? GREEN : RED,
+                    }}>
                     {school.totalProfit >= 0 ? "+" : ""}${Math.abs(school.totalProfit).toLocaleString()}
                   </div>
-                  <div className="text-[9px] font-mono" style={{ color: TEXT_MUTED }}>
+                  <div className="text-[9px] font-mono mt-0.5" style={{ color: TEXT_MUTED }}>
                     avg ${school.avgBankroll.toLocaleString()}
                   </div>
                 </div>
@@ -1921,7 +1948,7 @@ export default function LiveRacingPage() {
   /* ---- Don't render until mounted (avoid hydration mismatch) ---- */
   if (!mounted) {
     return (
-      <main className="min-h-screen pt-16" style={{ background: BG_WHITE }}>
+      <main className="min-h-screen pt-16" style={{ background: BG_DARK }}>
         <div className="max-w-7xl mx-auto px-4 py-20 text-center">
           <div className="animate-pulse text-sm" style={{ color: TEXT_MUTED }}>Loading race night...</div>
         </div>
@@ -1934,7 +1961,7 @@ export default function LiveRacingPage() {
   /* ================================================================== */
 
   return (
-    <main className="min-h-screen pt-16 pb-12" style={{ background: BG_WHITE }}>
+    <main className="min-h-screen pt-16 pb-12" style={{ background: BG_DARK }}>
       {/* Name entry modal */}
       <AnimatePresence>
         {showNameEntry && <NameEntryModal onSubmit={handleCreateUser} />}
@@ -1945,41 +1972,49 @@ export default function LiveRacingPage() {
         <div className="py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div>
+              {/* Badge row */}
               <div className="flex items-center gap-2 flex-wrap">
                 <span
-                  className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full"
-                  style={{ background: `${phaseBadgeColor}15`, color: phaseBadgeColor }}
+                  className="text-[10px] font-bold uppercase px-2.5 py-1 rounded-md"
+                  style={{ background: `${phaseBadgeColor}15`, color: phaseBadgeColor, border: `1px solid ${phaseBadgeColor}30` }}
                 >
                   {phaseLabel}
                 </span>
                 {race && (
                   <span
-                    className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full"
-                    style={{ background: `${TEXT_MUTED}10`, color: TEXT_MUTED }}
+                    className="text-[10px] font-semibold uppercase px-2.5 py-1 rounded-md"
+                    style={{ background: BG_CARD, color: TEXT_SEC, border: `1px solid ${BORDER}` }}
                   >
                     Race #{race.raceNumber}
                   </span>
                 )}
+                {/* Pulsing LIVE indicator with red dot */}
                 <span
-                  className="text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1"
-                  style={{ background: `${GREEN}10`, color: GREEN }}
+                  className="text-[10px] font-bold px-2.5 py-1 rounded-md flex items-center gap-1.5"
+                  style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.25)" }}
                 >
-                  <CircleDot className="w-2.5 h-2.5" /> Live
+                  <span className="w-2 h-2 rounded-full animate-pulse-live" style={{ background: "#ef4444" }} />
+                  LIVE
                 </span>
               </div>
               {race && (
                 <>
-                  <h2 className="text-xl font-bold mt-1" style={{ color: TEXT }}>
+                  <h2 className="text-xl font-bold mt-1.5" style={{ color: "#fff" }}>
                     {race.name}
                   </h2>
-                  <div className="flex items-center gap-2 text-xs mt-0.5" style={{ color: TEXT_SEC }}>
-                    <span>{race.track.name}</span>
-                    <span>{"·"}</span>
-                    <span>{race.distance}F {race.surface}</span>
-                    <span>{"·"}</span>
-                    <span>{race.condition}</span>
-                    <span>{"·"}</span>
-                    <span>${(race.purse / 1000).toFixed(0)}K Purse</span>
+                  {/* Race metadata badges */}
+                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                    {[
+                      race.track.name,
+                      `${race.distance}F ${race.surface}`,
+                      race.condition,
+                      `$${(race.purse / 1000).toFixed(0)}K Purse`,
+                    ].map((badge, idx) => (
+                      <span key={idx} className="text-[10px] px-2 py-0.5 rounded-md"
+                        style={{ background: BG_CARD, color: TEXT_SEC, border: `1px solid ${BORDER}` }}>
+                        {badge}
+                      </span>
+                    ))}
                   </div>
                 </>
               )}
@@ -1988,7 +2023,7 @@ export default function LiveRacingPage() {
 
           <div className="flex items-center gap-3">
             {user && (
-              <div className="text-right mr-2">
+              <div className="text-right mr-2 px-4 py-2 rounded-xl" style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}>
                 <div className="text-[10px] uppercase font-semibold" style={{ color: TEXT_MUTED }}>Balance</div>
                 <div className="text-lg font-bold font-mono" style={{ color: GOLD }}>
                   <AnimatedBalance value={user.bankroll - (phase !== "results" ? bets.reduce((s, b) => s + b.totalCost, 0) : 0)} />
@@ -2005,9 +2040,9 @@ export default function LiveRacingPage() {
             {/* ──── Left: Bet Slip / Results ──── */}
             <div className="lg:col-span-3 space-y-4">
               {phase === "betting" && user && (
-                <div className="p-4 rounded-2xl" style={{ background: BG_WHITE, border: `1.5px solid ${BORDER}` }}>
+                <div className="p-4 rounded-2xl" style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}>
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-bold" style={{ color: TEXT }}>
+                    <h3 className="text-sm font-bold" style={{ color: "#fff" }}>
                       <div className="flex items-center gap-2">
                         <Ticket className="w-4 h-4" style={{ color: GOLD }} />
                         Bet Slip
@@ -2028,9 +2063,9 @@ export default function LiveRacingPage() {
               )}
 
               {phase === "post_parade" && (
-                <div className="p-5 rounded-2xl text-center space-y-3" style={{ background: BG_CARD, border: `1.5px solid ${BORDER}` }}>
+                <div className="p-5 rounded-2xl text-center space-y-3" style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}>
                   <Lock className="w-6 h-6 mx-auto" style={{ color: ORANGE }} />
-                  <p className="text-sm font-bold" style={{ color: TEXT }}>Bets Locked</p>
+                  <p className="text-sm font-bold" style={{ color: "#fff" }}>Bets Locked</p>
                   <p className="text-xs" style={{ color: TEXT_SEC }}>
                     {bets.length > 0 ? `${bets.length} bet${bets.length > 1 ? "s" : ""} on your slip` : "No bets placed"}
                   </p>
@@ -2038,10 +2073,10 @@ export default function LiveRacingPage() {
                     <div className="space-y-1">
                       {bets.map((bet) => (
                         <div key={bet.id} className="flex items-center justify-between px-3 py-1.5 rounded-lg text-xs"
-                          style={{ background: BG_WHITE, border: `1px solid ${BORDER}` }}>
+                          style={{ background: BG_DARK, border: `1px solid ${BORDER}` }}>
                           <span className="font-semibold" style={{ color: GOLD }}>{BET_TYPE_CONFIG[bet.type].label}</span>
-                          <span style={{ color: TEXT }}>{bet.horseNames.join(" → ")}</span>
-                          <span className="font-mono font-bold" style={{ color: TEXT }}>${bet.totalCost}</span>
+                          <span style={{ color: "#e6edf3" }}>{bet.horseNames.join(" → ")}</span>
+                          <span className="font-mono font-bold" style={{ color: GOLD }}>${bet.totalCost}</span>
                         </div>
                       ))}
                     </div>
@@ -2050,7 +2085,7 @@ export default function LiveRacingPage() {
               )}
 
               {phase === "racing" && (
-                <div className="p-5 rounded-2xl text-center space-y-3" style={{ background: BG_DARK, border: `1.5px solid ${BG_DARK}` }}>
+                <div className="p-5 rounded-2xl text-center space-y-3" style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}>
                   <motion.div
                     animate={{ scale: [1, 1.1, 1] }}
                     transition={{ repeat: Infinity, duration: 1 }}
@@ -2058,15 +2093,15 @@ export default function LiveRacingPage() {
                     <Zap className="w-8 h-8 mx-auto" style={{ color: GOLD }} />
                   </motion.div>
                   <p className="text-base font-bold text-white">Race in Progress</p>
-                  <p className="text-xs text-white/50">Watch the track!</p>
+                  <p className="text-xs" style={{ color: TEXT_MUTED }}>Watch the track!</p>
                   {bets.length > 0 && (
                     <div className="mt-3 space-y-1">
                       {bets.map((bet) => (
                         <div key={bet.id} className="flex items-center justify-between px-3 py-1.5 rounded-lg text-xs"
-                          style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                          style={{ background: BG_DARK, border: `1px solid ${BORDER}` }}>
                           <span className="font-semibold" style={{ color: GOLD }}>{BET_TYPE_CONFIG[bet.type].label}</span>
-                          <span className="text-white/70 truncate px-2">{bet.horseNames.join(" → ")}</span>
-                          <span className="font-mono font-bold text-white">${bet.totalCost}</span>
+                          <span className="truncate px-2" style={{ color: TEXT_SEC }}>{bet.horseNames.join(" → ")}</span>
+                          <span className="font-mono font-bold" style={{ color: "#fff" }}>${bet.totalCost}</span>
                         </div>
                       ))}
                     </div>
@@ -2075,7 +2110,7 @@ export default function LiveRacingPage() {
               )}
 
               {phase === "results" && (
-                <div className="p-4 rounded-2xl" style={{ background: BG_WHITE, border: `1.5px solid ${BORDER}` }}>
+                <div className="p-4 rounded-2xl" style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}>
                   <ResultsPanel
                     race={race}
                     finishOrder={finishOrder}
@@ -2089,7 +2124,7 @@ export default function LiveRacingPage() {
 
             {/* ──── Center: Race Track ──── */}
             <div className="lg:col-span-6">
-              <div className="relative rounded-2xl overflow-hidden" style={{ border: `1.5px solid ${BORDER}` }}>
+              <div className="relative rounded-2xl overflow-hidden" style={{ border: `1px solid ${BORDER}` }}>
                 {/* Win celebration overlay */}
                 <AnimatePresence>
                   {showCelebration && finishOrder[0] && (
@@ -2125,18 +2160,18 @@ export default function LiveRacingPage() {
                       <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: GOLD }}>
                         Odds Board
                       </h3>
-                      <span className="text-[10px] font-mono" style={{ color: "#ffffff50" }}>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-md" style={{ background: BG_CARD, color: TEXT_SEC, border: `1px solid ${BORDER}` }}>
                         {race.horses.length} runners · {race.distance}F {race.surface}
                       </span>
                     </div>
 
                     {/* Column headers */}
-                    <div className="flex items-center gap-2 px-2 pb-1.5 mb-1" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-                      <span className="w-5 text-[8px] font-bold text-center" style={{ color: "#ffffff40" }}>#</span>
-                      <span className="flex-1 text-[8px] font-bold uppercase" style={{ color: "#ffffff40" }}>Horse</span>
-                      <span className="w-12 text-[8px] font-bold text-center uppercase" style={{ color: "#ffffff40" }}>Win</span>
-                      <span className="w-12 text-[8px] font-bold text-center uppercase" style={{ color: "#ffffff40" }}>Place</span>
-                      <span className="w-12 text-[8px] font-bold text-center uppercase" style={{ color: "#ffffff40" }}>Show</span>
+                    <div className="flex items-center gap-2 px-2 pb-1.5 mb-1" style={{ borderBottom: `1px solid ${BORDER}` }}>
+                      <span className="w-5 text-[8px] font-bold text-center" style={{ color: TEXT_MUTED }}>#</span>
+                      <span className="flex-1 text-[8px] font-bold uppercase" style={{ color: TEXT_MUTED }}>Horse</span>
+                      <span className="w-12 text-[8px] font-bold text-center uppercase" style={{ color: TEXT_MUTED }}>Win</span>
+                      <span className="w-12 text-[8px] font-bold text-center uppercase" style={{ color: TEXT_MUTED }}>Place</span>
+                      <span className="w-12 text-[8px] font-bold text-center uppercase" style={{ color: TEXT_MUTED }}>Show</span>
                     </div>
 
                     {/* Horse rows */}
@@ -2148,15 +2183,16 @@ export default function LiveRacingPage() {
                         return (
                           <div
                             key={horse.name}
-                            className="flex items-center gap-2 px-2 py-2 rounded-lg transition-all hover:bg-white/5"
+                            className="flex items-center gap-2 px-2 py-2 rounded-lg transition-all"
+                            style={{ background: i % 2 === 0 ? BG_CARD : "transparent" }}
                           >
                             {/* Post number + image */}
                             <div className="w-5 shrink-0">
-                              <div className="w-5 h-5 rounded-full overflow-hidden" style={{ border: `1.5px solid ${horse.color}` }}>
+                              <div className="w-5 h-5 rounded-full overflow-hidden" style={{ border: `1.5px solid ${horse.color}`, boxShadow: `0 0 4px ${horse.color}30` }}>
                                 {imgUrl ? (
                                   <Image src={imgUrl} alt={horse.name} width={20} height={20} className="w-full h-full object-cover" />
                                 ) : (
-                                  <div className="w-full h-full flex items-center justify-center text-[8px] font-bold text-white" style={{ background: horse.color }}>
+                                  <div className="w-full h-full flex items-center justify-center text-[8px] font-bold" style={{ background: horse.color, color: "#0d1117" }}>
                                     {i + 1}
                                   </div>
                                 )}
@@ -2165,10 +2201,10 @@ export default function LiveRacingPage() {
 
                             {/* Name + style */}
                             <div className="flex-1 min-w-0">
-                              <Link href={`/profiles/${slug}`} className="text-[11px] font-bold truncate block hover:underline" style={{ color: "#fff" }}>
+                              <Link href={`/profiles/${slug}`} className="text-[11px] font-bold truncate block hover:underline" style={{ color: "#e6edf3" }}>
                                 {horse.name}
                               </Link>
-                              <div className="text-[9px]" style={{ color: horse.color }}>
+                              <div className="text-[9px] font-medium" style={{ color: horse.color }}>
                                 {horse.runningStyle}
                               </div>
                             </div>
@@ -2178,23 +2214,23 @@ export default function LiveRacingPage() {
                               <div className="text-[11px] font-bold font-mono" style={{ color: GOLD }}>
                                 {formatOddsDisplay(odds?.win ?? 2)}
                               </div>
-                              <div className="text-[8px] font-mono" style={{ color: "#ffffff30" }}>
+                              <div className="text-[8px] font-mono" style={{ color: TEXT_MUTED }}>
                                 ${Math.round(10 * (odds?.win ?? 2))}
                               </div>
                             </div>
                             <div className="w-12 text-center">
-                              <div className="text-[11px] font-bold font-mono" style={{ color: "#94a3b8" }}>
+                              <div className="text-[11px] font-bold font-mono" style={{ color: TEXT_SEC }}>
                                 {formatOddsDisplay(odds?.place ?? 1.5)}
                               </div>
-                              <div className="text-[8px] font-mono" style={{ color: "#ffffff30" }}>
+                              <div className="text-[8px] font-mono" style={{ color: TEXT_MUTED }}>
                                 ${Math.round(10 * (odds?.place ?? 1.5))}
                               </div>
                             </div>
                             <div className="w-12 text-center">
-                              <div className="text-[11px] font-bold font-mono" style={{ color: "#94a3b8" }}>
+                              <div className="text-[11px] font-bold font-mono" style={{ color: TEXT_SEC }}>
                                 {formatOddsDisplay(odds?.show ?? 1.2)}
                               </div>
-                              <div className="text-[8px] font-mono" style={{ color: "#ffffff30" }}>
+                              <div className="text-[8px] font-mono" style={{ color: TEXT_MUTED }}>
                                 ${Math.round(10 * (odds?.show ?? 1.2))}
                               </div>
                             </div>
@@ -2204,8 +2240,8 @@ export default function LiveRacingPage() {
                     </div>
 
                     {/* Pace projection */}
-                    <div className="mt-3 p-2.5 rounded-lg" style={{ background: "rgba(184,148,31,0.08)", border: "1px solid rgba(184,148,31,0.15)" }}>
-                      <div className="text-[10px]" style={{ color: "#ffffff70" }}>
+                    <div className="mt-3 p-2.5 rounded-lg" style={{ background: `${GOLD}08`, border: `1px solid ${GOLD}20` }}>
+                      <div className="text-[10px]" style={{ color: TEXT_SEC }}>
                         {(() => {
                           const fr = race.horses.filter((h) => h.runningStyle === "Front Runner").length;
                           const cl = race.horses.filter((h) => h.runningStyle === "Closer").length;
@@ -2226,37 +2262,47 @@ export default function LiveRacingPage() {
             <div className="lg:col-span-3 space-y-4">
               {/* User Stats */}
               {user && (
-                <div className="p-4 rounded-2xl sticky top-20" style={{ background: BG_WHITE, border: `1.5px solid ${BORDER}` }}>
+                <div className="p-4 rounded-2xl sticky top-20" style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}>
                   <UserStats user={user} />
 
-                  {/* Next race countdown */}
-                  <div className="mt-4 pt-3" style={{ borderTop: `1px solid ${BORDER}` }}>
-                    <div className="flex items-center justify-between">
+                  {/* Next race countdown — large styled digital clock */}
+                  <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${BORDER}` }}>
+                    <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5" style={{ color: TEXT_MUTED }} />
-                        <span className="text-[10px] font-semibold uppercase" style={{ color: TEXT_MUTED }}>
+                        <Clock className="w-3.5 h-3.5" style={{ color: BLUE }} />
+                        <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: TEXT_SEC }}>
                           Next Race
                         </span>
                       </div>
-                      <span className="text-xs font-mono font-bold" style={{ color: TEXT }}>
+                    </div>
+                    {/* Large countdown clock */}
+                    <div className="text-center py-2 rounded-xl mb-3" style={{ background: BG_DARK, border: `1px solid ${BORDER}` }}>
+                      <div className="text-2xl font-mono font-bold" style={{ color: BLUE, textShadow: `0 0 20px ${BLUE}30` }}>
                         {formatTimer(Math.max(0, Math.ceil(CYCLE_DURATION - getTimeInCycle())))}
-                      </span>
+                      </div>
                     </div>
-                    {/* Cycle progress bar */}
-                    <div className="mt-2 h-1.5 rounded-full overflow-hidden" style={{ background: BORDER }}>
-                      <motion.div
-                        className="h-full rounded-full"
-                        style={{
-                          background: `linear-gradient(to right, ${GOLD}, ${phaseBadgeColor})`,
-                          width: `${(getTimeInCycle() / CYCLE_DURATION) * 100}%`,
-                        }}
-                      />
-                    </div>
-                    <div className="flex justify-between mt-1 text-[9px]" style={{ color: TEXT_MUTED }}>
-                      <span>Betting</span>
-                      <span>Post</span>
-                      <span>Race</span>
-                      <span>Results</span>
+
+                    {/* Betting phase stepper */}
+                    <div className="flex items-center gap-1">
+                      {(["betting", "post_parade", "racing", "results"] as Phase[]).map((p, idx) => {
+                        const labels = ["Betting", "Post", "Race", "Results"];
+                        const isActive = p === phase;
+                        const isPast = ["betting", "post_parade", "racing", "results"].indexOf(phase) > idx;
+                        const stepColor = isActive ? phaseBadgeColor : isPast ? GOLD : TEXT_MUTED;
+                        return (
+                          <div key={p} className="flex-1 flex flex-col items-center gap-1">
+                            <div
+                              className={`w-full h-1.5 rounded-full ${isActive ? "animate-stepper-pulse" : ""}`}
+                              style={{
+                                background: isActive ? stepColor : isPast ? `${GOLD}40` : BORDER,
+                              }}
+                            />
+                            <span className="text-[8px] font-semibold uppercase" style={{ color: isActive ? stepColor : TEXT_MUTED }}>
+                              {labels[idx]}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -2269,8 +2315,8 @@ export default function LiveRacingPage() {
                     >
                       <button
                         onClick={resetBankroll}
-                        className="w-full py-2.5 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2"
-                        style={{ background: RED }}
+                        className="w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2"
+                        style={{ background: RED, color: "#0d1117" }}
                       >
                         <RotateCcw className="w-3.5 h-3.5" />
                         Busted! Reset to $1,000
@@ -2299,7 +2345,7 @@ export default function LiveRacingPage() {
               )}
 
               {/* Shared Leaderboard */}
-              <div className="p-4 rounded-2xl" style={{ background: BG_WHITE, border: `1.5px solid ${BORDER}` }}>
+              <div className="p-4 rounded-2xl" style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}>
                 <SharedLeaderboard
                   entries={leaderboard}
                   schoolStandings={schoolStandings}
@@ -2322,7 +2368,7 @@ export default function LiveRacingPage() {
             >
               <Zap className="w-8 h-8" style={{ color: GOLD }} />
             </motion.div>
-            <p className="text-sm" style={{ color: TEXT_SEC }}>Generating race card...</p>
+            <p className="text-sm" style={{ color: TEXT_MUTED }}>Generating race card...</p>
           </div>
         )}
       </div>
