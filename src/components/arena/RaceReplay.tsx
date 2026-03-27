@@ -46,14 +46,11 @@ const LABEL_WIDTH = 120;
 
 const GALLOP_CSS = `
 @keyframes gallop {
-  0%   { transform: translateX(var(--hx, 0)) scaleY(1) translateY(0); }
-  25%  { transform: translateX(var(--hx, 0)) scaleY(1.06) translateY(-1px); }
-  50%  { transform: translateX(var(--hx, 0)) scaleY(1) translateY(0); }
-  75%  { transform: translateX(var(--hx, 0)) scaleY(0.94) translateY(1px); }
-  100% { transform: translateX(var(--hx, 0)) scaleY(1) translateY(0); }
-}
-@keyframes gallop-still {
-  0%, 100% { transform: translateX(var(--hx, 0)) scaleY(1); }
+  0%   { transform: translate(-100%, -50%) scaleY(1); }
+  25%  { transform: translate(-100%, calc(-50% - 1px)) scaleY(1.06); }
+  50%  { transform: translate(-100%, -50%) scaleY(1); }
+  75%  { transform: translate(-100%, calc(-50% + 1px)) scaleY(0.94); }
+  100% { transform: translate(-100%, -50%) scaleY(1); }
 }
 `;
 
@@ -336,17 +333,17 @@ export default function RaceReplay({ horses, colors, distance }: RaceReplayProps
                   }}
                 />
 
-                {/* Horse — GPU-accelerated with gallop keyframe */}
+                {/* Horse — left% for position, keyframe for gallop bounce */}
                 <div
                   className="absolute top-1/2"
                   style={{
-                    "--hx": `calc(${xPct}% * ${1} - 100%)`,
-                    willChange: "transform",
-                    animation: isGalloping
-                      ? "gallop 0.5s ease-in-out infinite"
-                      : "gallop-still 0s linear forwards",
+                    left: `${xPct}%`,
+                    transform: "translate(-100%, -50%)",
+                    willChange: "left, transform",
+                    transition: "left 0.08s linear",
+                    animation: isGalloping ? "gallop 0.5s ease-in-out infinite" : "none",
                     transformOrigin: "center bottom",
-                  } as React.CSSProperties}
+                  }}
                 >
                   <HorseSilhouette color={h.color} size={30} />
                 </div>
