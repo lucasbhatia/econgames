@@ -238,6 +238,57 @@ export function useLeaderboard() {
     }
   }, []);
 
+  // Process race result atomically via server-side Postgres function.
+  // This replaces the old syncPlayer + logBets pattern for payout processing.
+  // The function is idempotent: calling it twice for the same player+epoch is safe.
+  const processRaceResult = useCallback(async (
+    playerId: string,
+    raceEpoch: number,
+    bets: BetRecord[],
+    netProfit: number,
+    biggestWin: number,
+  ): Promise<{ success: boolean; new_bankroll?: number; already_processed?: boolean }> => {
+    if (!isConfigured()) return { success: false };
+
+    try {
+      const { data, error } = await supabase.rpc("process_race_result", {
+        p_player_id: playerId,
+        p_race_epoch: raceEpoch,
+        p_bets: bets.map((b) => ({
+          bet_type: b.bet_type,
+          selections: b.selections,
+          amount: b.amount,
+          total_cost: b.total_cost,
+          combinations: b.combinations,
+          payout: b.payout,
+          won: b.won,
+        })),
+        p_net_profit: netProfit,
+        p_biggest_win: biggestWin,
+      });
+
+      if (error) {
+        console.warn("processRaceResult RPC failed:", error);
+        // Fallback: try the old direct approach
+        await syncPlayer({
+          id: playerId,
+          name: "",
+          school: "",
+          bankroll: 0,
+          total_profit: netProfit,
+          races_played: 1,
+          biggest_win: biggestWin,
+        });
+        return { success: false };
+      }
+
+      return data as { success: boolean; new_bankroll?: number; already_processed?: boolean };
+    } catch (err) {
+      console.warn("processRaceResult failed:", err);
+      return { success: false };
+    }
+  }, [syncPlayer]);
+
   return {
     leaderboard,
     schoolStandings,
@@ -245,6 +296,7 @@ export function useLeaderboard() {
     connected,
     syncPlayer,
     logBets,
+    processRaceResult,
     refetch: fetchLeaderboard,
     refetchWins: fetchRecentWins,
     recentWins,

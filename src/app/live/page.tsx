@@ -49,6 +49,7 @@ import type { LeaderboardEntry, SchoolStanding } from "@/lib/supabase/useLeaderb
 import { hashPin } from "@/lib/auth/pin";
 import { registerPlayer, loginPlayer } from "@/lib/supabase/auth";
 import { getHorseImageUrl } from "@/lib/data/horse-images";
+import { supabase } from "@/lib/supabase/client";
 
 import {
   CYCLE_DURATION,
@@ -1044,7 +1045,7 @@ export default function LiveRacingPage() {
   const [mounted, setMounted] = useState(false);
 
   /* ---- Supabase leaderboard ---- */
-  const { leaderboard, schoolStandings, loading: lbLoading, connected: lbConnected, syncPlayer, logBets, refetchWins, recentWins } = useLeaderboard();
+  const { leaderboard, schoolStandings, loading: lbLoading, connected: lbConnected, syncPlayer, logBets, processRaceResult, refetchWins, recentWins } = useLeaderboard();
 
   /* ---- Race state ---- */
   const [epoch, setEpoch] = useState(0);
@@ -1065,10 +1066,25 @@ export default function LiveRacingPage() {
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastEpochRef = useRef(0);
   const resultsProcessedRef = useRef(false);
+  const clockOffsetRef = useRef(0); // server time offset in ms
 
-  /* ---- Initialize — load user and validate against server ---- */
+  /* ---- Initialize — load user, sync clock, validate against server ---- */
   useEffect(() => {
     setMounted(true);
+
+    // Sync clock with server to prevent phase drift across clients
+    (async () => {
+      try {
+        const { data } = await supabase.rpc("get_server_time");
+        if (data) {
+          const serverMs = new Date(data).getTime();
+          clockOffsetRef.current = serverMs - Date.now();
+        }
+      } catch {
+        // Fail silently — 0 offset is fine as fallback
+      }
+    })();
+
     const saved = loadUser();
     if (saved) {
       // Validate bankroll: cap at reasonable max to prevent localStorage tampering
@@ -1116,8 +1132,10 @@ export default function LiveRacingPage() {
     if (!mounted) return;
 
     const tick = () => {
-      const currentEpoch = getCurrentEpoch();
-      const cycleTime = getTimeInCycle();
+      // Use server-corrected time to keep all clients in sync
+      const now = Date.now() + clockOffsetRef.current;
+      const currentEpoch = Math.floor(now / (CYCLE_DURATION * 1000));
+      const cycleTime = (now / 1000) % CYCLE_DURATION;
       const currentPhase = getPhaseFromCycleTime(cycleTime);
       const currentTimer = getPhaseTimer(cycleTime);
 
@@ -1184,13 +1202,14 @@ export default function LiveRacingPage() {
     setTotalWagered(wagered);
     setTotalWinnings(winnings);
 
-    // Update user
+    // Update user and sync to server via atomic RPC
     if (user && bets.length > 0) {
       const netProfit = winnings - wagered;
       const newBankroll = Math.max(0, user.bankroll + netProfit);
       const wonBets = results.filter(r => r.won).map(r => r.payout - r.bet.totalCost);
       const newBiggestWin = wonBets.length > 0 ? Math.max(user.biggestWin, ...wonBets) : user.biggestWin;
 
+      // Update local state optimistically
       const updatedUser: UserProfile = {
         ...user,
         bankroll: newBankroll,
@@ -1202,19 +1221,10 @@ export default function LiveRacingPage() {
       setUser(updatedUser);
       saveUser(updatedUser);
 
-      // Sync to Supabase
-      syncPlayer({
-        id: updatedUser.id,
-        name: updatedUser.name,
-        school: updatedUser.school,
-        bankroll: updatedUser.bankroll,
-        total_profit: updatedUser.totalProfit,
-        races_played: updatedUser.racesPlayed,
-        biggest_win: updatedUser.biggestWin,
-      });
-
-      // Log bets to Supabase, then refresh recent wins
-      logBets(
+      // Atomic server-side payout via RPC (idempotent — safe to retry or call from multiple tabs)
+      processRaceResult(
+        updatedUser.id,
+        epoch,
         results.map((r) => ({
           player_id: updatedUser.id,
           race_epoch: epoch,
@@ -1225,9 +1235,15 @@ export default function LiveRacingPage() {
           combinations: r.bet.combinations,
           payout: r.payout,
           won: r.won,
-        }))
-      ).then(() => {
-        // Delay to let Supabase insert propagate
+        })),
+        netProfit,
+        newBiggestWin,
+      ).then((result) => {
+        // If server returned a different bankroll (e.g., already processed), correct local state
+        if (result?.new_bankroll !== undefined && result.new_bankroll !== newBankroll) {
+          setUser((prev) => prev ? { ...prev, bankroll: result.new_bankroll! } : prev);
+          saveUser({ ...updatedUser, bankroll: result.new_bankroll! });
+        }
         setTimeout(refetchWins, 500);
       });
 
@@ -1237,7 +1253,7 @@ export default function LiveRacingPage() {
         setTimeout(() => setShowCelebration(false), 4000);
       }
     } else if (user && bets.length === 0) {
-      // Still count as race played
+      // No bets — still count as race played via RPC (empty bets array)
       const updatedUser: UserProfile = {
         ...user,
         racesPlayed: user.racesPlayed + 1,
@@ -1246,22 +1262,18 @@ export default function LiveRacingPage() {
       setUser(updatedUser);
       saveUser(updatedUser);
 
-      // Sync to Supabase
-      syncPlayer({
-        id: updatedUser.id,
-        name: updatedUser.name,
-        school: updatedUser.school,
-        bankroll: updatedUser.bankroll,
-        total_profit: updatedUser.totalProfit,
-        races_played: updatedUser.racesPlayed,
-        biggest_win: updatedUser.biggestWin,
-      });
+      processRaceResult(updatedUser.id, epoch, [], 0, 0);
     }
-  }, [phase, race, finishOrder, bets, user, epoch, syncPlayer, logBets]);
+  }, [phase, race, finishOrder, bets, user, epoch, processRaceResult]);
 
   /* ---- Bet management ---- */
   const placeBet = useCallback((bet: Omit<Bet, "id">) => {
     if (phase !== "betting" || !user) return;
+    // 2-second buffer before close to prevent bets submitted during phase transition
+    const now = Date.now() + clockOffsetRef.current;
+    const cycleTime = (now / 1000) % CYCLE_DURATION;
+    if (cycleTime >= BETTING_DURATION - 2) return;
+
     const totalBetSoFar = bets.reduce((s, b) => s + b.totalCost, 0);
     if (totalBetSoFar + bet.totalCost > user.bankroll) return;
 
