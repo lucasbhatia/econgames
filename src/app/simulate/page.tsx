@@ -76,6 +76,82 @@ const DISTANCE_OPTIONS = [
   { label: "12F", value: 12 },
 ];
 
+// Track templates with real data from our GPS pipeline (985K rows across 10 tracks).
+// Each template sets the typical distance, surface, and bias for that track's
+// signature race, giving users a one-click realistic setup.
+const TRACK_TEMPLATES = [
+  {
+    id: "GP", name: "Gulfstream Park", location: "Hallandale Beach, FL",
+    distance: 8, surface: "Dirt" as const, bias: "none" as const,
+    distances: [5,6,7,8,9,10,11,12], surfaces: ["Dirt","Turf"] as const,
+    racesInData: 4198, horsesInData: 2254,
+    description: "Florida's premier track. Deep field of shippers from across the country.",
+  },
+  {
+    id: "SA", name: "Santa Anita Park", location: "Arcadia, CA",
+    distance: 8, surface: "Dirt" as const, bias: "none" as const,
+    distances: [6,7,8,9,10,12], surfaces: ["Dirt","Turf"] as const,
+    racesInData: 2571, horsesInData: 1347,
+    description: "The Great Race Place. Known for its turf course and scenic mountain backdrop.",
+  },
+  {
+    id: "OP", name: "Oaklawn Park", location: "Hot Springs, AR",
+    distance: 9, surface: "Dirt" as const, bias: "none" as const,
+    distances: [6,8,9,12], surfaces: ["Dirt"] as const,
+    racesInData: 3141, horsesInData: 1585,
+    description: "Historic Arkansas track. Major Derby prep races. Dirt only.",
+  },
+  {
+    id: "TAM", name: "Tampa Bay Downs", location: "Tampa, FL",
+    distance: 8, surface: "Dirt" as const, bias: "none" as const,
+    distances: [5,6,7,8,9,11], surfaces: ["Dirt","Turf"] as const,
+    racesInData: 4038, horsesInData: 1691,
+    description: "Florida's winter circuit. Strong claiming and allowance races.",
+  },
+  {
+    id: "AQU", name: "Aqueduct", location: "Queens, NY",
+    distance: 8, surface: "Dirt" as const, bias: "slight_inside" as const,
+    distances: [6,7,8,9,10], surfaces: ["Dirt"] as const,
+    racesInData: 2436, horsesInData: 1162,
+    description: "New York's winter track. Known for a rail bias on the inner dirt course.",
+  },
+  {
+    id: "FG", name: "Fair Grounds", location: "New Orleans, LA",
+    distance: 8, surface: "Dirt" as const, bias: "none" as const,
+    distances: [5,6,8,9,10], surfaces: ["Dirt","Turf"] as const,
+    racesInData: 3793, horsesInData: 1956,
+    description: "Louisiana's flagship. Rich stakes calendar and competitive fields.",
+  },
+  {
+    id: "TP", name: "Turfway Park", location: "Florence, KY",
+    distance: 8, surface: "Dirt" as const, bias: "none" as const,
+    distances: [5,6,7,8,9,10], surfaces: ["Dirt"] as const,
+    racesInData: 3811, horsesInData: 2023,
+    description: "Kentucky synthetic/dirt track. Key prep races for the Derby trail.",
+  },
+  {
+    id: "LRL", name: "Laurel Park", location: "Laurel, MD",
+    distance: 8, surface: "Dirt" as const, bias: "none" as const,
+    distances: [6,7,8,9], surfaces: ["Dirt"] as const,
+    racesInData: 1689, horsesInData: 852,
+    description: "Maryland's main track. Competitive mid-Atlantic racing.",
+  },
+  {
+    id: "HOU", name: "Sam Houston", location: "Houston, TX",
+    distance: 8, surface: "Dirt" as const, bias: "none" as const,
+    distances: [5,6,7,8,9,12], surfaces: ["Dirt","Turf"] as const,
+    racesInData: 1969, horsesInData: 872,
+    description: "Texas racing with both dirt and turf. Growing stakes program.",
+  },
+  {
+    id: "CNL", name: "Colonial Downs", location: "New Kent, VA",
+    distance: 9, surface: "Dirt" as const, bias: "none" as const,
+    distances: [6,7,8,9,11], surfaces: ["Dirt"] as const,
+    racesInData: 154, horsesInData: 154,
+    description: "Virginia track featured in our GPS analysis demo. Home of the featured race.",
+  },
+];
+
 const LIVE_SIM_COUNT = 500;
 const DEEP_SIM_COUNT = 1000;
 
@@ -698,6 +774,40 @@ function SimulatePageInner() {
           >
             Track Settings
           </h2>
+
+          {/* Track Templates — one-click setup from real GPS data */}
+          <div className="mb-5">
+            <label className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: TEXT_SEC }}>
+              Choose a Track (from {TRACK_TEMPLATES.reduce((s, t) => s + t.racesInData, 0).toLocaleString()} GPS-tracked races)
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {TRACK_TEMPLATES.map((track) => (
+                <button
+                  key={track.id}
+                  onClick={() => {
+                    setDistance(track.distance);
+                    setSurface(track.surface);
+                    setTrackBias(track.bias);
+                  }}
+                  className="group relative rounded-lg border px-3 py-2 text-left transition-all hover:border-[#b8941f] hover:bg-[#b8941f08]"
+                  style={{
+                    borderColor: distance === track.distance && surface === track.surface && trackBias === track.bias ? GOLD : BORDER,
+                    background: distance === track.distance && surface === track.surface && trackBias === track.bias ? `${GOLD}10` : BG_WHITE,
+                    minWidth: 140,
+                  }}
+                  title={track.description}
+                >
+                  <div className="text-sm font-semibold" style={{ color: TEXT }}>{track.name}</div>
+                  <div className="text-[10px]" style={{ color: TEXT_MUTED }}>
+                    {track.location} · {track.distances.map(d => `${d}F`).join(" ")} · {track.surfaces.join("/")}
+                  </div>
+                  <div className="text-[9px] font-mono mt-0.5" style={{ color: GOLD }}>
+                    {track.racesInData.toLocaleString()} races · {track.horsesInData.toLocaleString()} horses
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
 
           <div className="flex flex-wrap items-center gap-4 sm:gap-6">
             {/* Distance */}
