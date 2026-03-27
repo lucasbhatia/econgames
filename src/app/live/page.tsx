@@ -25,7 +25,6 @@ import {
   CircleDot,
   Hash,
   KeyRound,
-  History,
   LogIn,
   UserPlus,
   ShieldCheck,
@@ -40,8 +39,7 @@ import LiveRaceView from "@/components/arena/LiveRaceView";
 import { useLeaderboard } from "@/lib/supabase/useLeaderboard";
 import type { LeaderboardEntry, SchoolStanding } from "@/lib/supabase/useLeaderboard";
 import { hashPin } from "@/lib/auth/pin";
-import { registerPlayer, loginPlayer, fetchBetHistory } from "@/lib/supabase/auth";
-import type { BetHistoryRow } from "@/lib/supabase/auth";
+import { registerPlayer, loginPlayer } from "@/lib/supabase/auth";
 
 /* ================================================================== */
 /*  Constants                                                          */
@@ -1556,84 +1554,6 @@ function ResultsPanel({
 }
 
 /* ================================================================== */
-/*  Leaderboard (local, Supabase-ready)                                */
-/* ================================================================== */
-
-function UserStats({ user }: { user: UserProfile }) {
-  const profit = user.bankroll - user.startingBankroll;
-
-  return (
-    <div className="space-y-3">
-      {/* Player card */}
-      <div className="flex items-center gap-3">
-        <div
-          className="w-11 h-11 rounded-full flex items-center justify-center text-lg font-bold"
-          style={{ background: `${GOLD}20`, color: GOLD, border: `2px solid ${GOLD}40` }}
-        >
-          {user.name.charAt(0).toUpperCase()}
-        </div>
-        <div className="flex-1">
-          <div className="text-sm font-bold" style={{ color: TEXT }}>{user.name}</div>
-          <div className="text-[11px]" style={{ color: TEXT_SEC }}>
-            {user.school && <>{user.school} · </>}{user.racesPlayed} race{user.racesPlayed !== 1 ? "s" : ""}
-          </div>
-        </div>
-      </div>
-
-      {/* 3-column mini-dashboard with icons */}
-      <div className="grid grid-cols-3 gap-2">
-        <div className="p-2.5 rounded-xl text-center" style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}>
-          <DollarSign className="w-3.5 h-3.5 mx-auto mb-1" style={{ color: GOLD }} />
-          <div className="text-[9px] font-semibold uppercase tracking-wider" style={{ color: TEXT_MUTED }}>Bankroll</div>
-          <div className="text-sm font-bold font-mono mt-0.5" style={{ color: TEXT }}>
-            <AnimatedBalance value={user.bankroll} />
-          </div>
-        </div>
-        <div className="p-2.5 rounded-xl text-center" style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}>
-          <TrendingUp className="w-3.5 h-3.5 mx-auto mb-1" style={{ color: profit >= 0 ? GREEN : RED }} />
-          <div className="text-[9px] font-semibold uppercase tracking-wider" style={{ color: TEXT_MUTED }}>Profit</div>
-          <div className="text-sm font-bold font-mono mt-0.5" style={{ color: profit >= 0 ? GREEN : RED }}>
-            {profit >= 0 ? "+" : ""}{profit}
-          </div>
-        </div>
-        <div className="p-2.5 rounded-xl text-center" style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}>
-          <Trophy className="w-3.5 h-3.5 mx-auto mb-1" style={{ color: GOLD }} />
-          <div className="text-[9px] font-semibold uppercase tracking-wider" style={{ color: TEXT_MUTED }}>Best Win</div>
-          <div className="text-sm font-bold font-mono mt-0.5" style={{ color: GOLD }}>
-            ${user.biggestWin}
-          </div>
-        </div>
-      </div>
-
-      {/* Race history as color-coded win/loss pills */}
-      {user.history.length > 0 && (
-        <div>
-          <div className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: TEXT_SEC }}>
-            Recent Races
-          </div>
-          <div className="flex gap-1 flex-wrap">
-            {user.history.slice(-20).map((h, i) => (
-              <div
-                key={i}
-                className="rounded-full px-1.5 py-0.5 text-[9px] font-mono font-bold"
-                style={{
-                  background: h.profit > 0 ? `${GREEN}18` : h.profit < 0 ? `${RED}15` : `${TEXT_MUTED}15`,
-                  color: h.profit > 0 ? GREEN : h.profit < 0 ? RED : TEXT_MUTED,
-                  border: `1px solid ${h.profit > 0 ? `${GREEN}30` : h.profit < 0 ? `${RED}25` : BORDER}`,
-                }}
-                title={`Race: ${h.profit >= 0 ? "+" : ""}${h.profit}`}
-              >
-                {h.profit > 0 ? `+${h.profit}` : h.profit < 0 ? h.profit : "0"}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ================================================================== */
 /*  Live Activity Feed                                                 */
 /* ================================================================== */
 
@@ -1663,156 +1583,6 @@ function LiveActivityFeed({ wins }: { wins: { name: string; bet_type: string; pa
           </div>
         ))}
       </div>
-    </div>
-  );
-}
-
-/* ================================================================== */
-/*  Bet History Panel                                                  */
-/* ================================================================== */
-
-function BetHistoryPanel({ playerId }: { playerId: string }) {
-  const [bets, setBets] = useState<BetHistoryRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState(false);
-
-  useEffect(() => {
-    fetchBetHistory(playerId).then((data) => {
-      setBets(data);
-      setLoading(false);
-    });
-  }, [playerId]);
-
-  if (loading) {
-    return (
-      <div className="py-3 text-center">
-        <div className="animate-pulse text-[11px]" style={{ color: TEXT_MUTED }}>Loading bet history...</div>
-      </div>
-    );
-  }
-
-  const totalBets = bets.length;
-  const wins = bets.filter((b) => b.won).length;
-  const winRate = totalBets > 0 ? Math.round((wins / totalBets) * 100) : 0;
-  const totalWagered = bets.reduce((s, b) => s + b.total_cost, 0);
-  const totalPayout = bets.reduce((s, b) => s + b.payout, 0);
-  const netProfit = totalPayout - totalWagered;
-  const displayBets = expanded ? bets : bets.slice(0, 5);
-
-  return (
-    <div className="space-y-2.5">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <History className="w-3.5 h-3.5" style={{ color: GOLD }} />
-        <span className="text-xs font-bold uppercase tracking-wider" style={{ color: TEXT_SEC }}>
-          Bet History
-        </span>
-        <span className="ml-auto text-[10px] font-mono" style={{ color: TEXT_MUTED }}>
-          {totalBets} bet{totalBets !== 1 ? "s" : ""}
-        </span>
-      </div>
-
-      {/* Stats row */}
-      {totalBets > 0 && (
-        <div className="grid grid-cols-3 gap-1.5">
-          <div className="px-2 py-1.5 rounded-lg text-center" style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}>
-            <div className="text-[9px] font-semibold uppercase" style={{ color: TEXT_MUTED }}>Win Rate</div>
-            <div className="text-xs font-bold font-mono" style={{ color: winRate >= 50 ? GREEN : winRate >= 30 ? GOLD : RED }}>
-              {winRate}%
-            </div>
-          </div>
-          <div className="px-2 py-1.5 rounded-lg text-center" style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}>
-            <div className="text-[9px] font-semibold uppercase" style={{ color: TEXT_MUTED }}>Wagered</div>
-            <div className="text-xs font-bold font-mono" style={{ color: TEXT }}>
-              ${totalWagered.toLocaleString()}
-            </div>
-          </div>
-          <div className="px-2 py-1.5 rounded-lg text-center" style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}>
-            <div className="text-[9px] font-semibold uppercase" style={{ color: TEXT_MUTED }}>Net P&L</div>
-            <div className="text-xs font-bold font-mono" style={{ color: netProfit >= 0 ? GREEN : RED }}>
-              {netProfit >= 0 ? "+" : ""}{netProfit.toLocaleString()}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Bet list */}
-      {totalBets === 0 ? (
-        <div className="text-center py-5 rounded-xl" style={{ background: BG_CARD, border: `1px dashed ${BORDER}` }}>
-          <Ticket className="w-5 h-5 mx-auto mb-2" style={{ color: TEXT_MUTED }} />
-          <p className="text-[11px] font-medium" style={{ color: TEXT_MUTED }}>No bets yet</p>
-          <p className="text-[10px] mt-0.5" style={{ color: TEXT_MUTED }}>Place your first wager!</p>
-        </div>
-      ) : (
-        <div className="space-y-1 max-h-[300px] overflow-y-auto pr-0.5">
-          {displayBets.map((bet) => (
-            <div
-              key={bet.id}
-              className="flex items-center gap-2 px-2.5 py-2 rounded-lg"
-              style={{
-                background: bet.won ? `${GREEN}06` : BG_CARD,
-                border: `1px solid ${bet.won ? `${GREEN}20` : BORDER}`,
-              }}
-            >
-              {/* Win/loss indicator */}
-              <div
-                className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
-                style={{ background: bet.won ? `${GREEN}20` : `${RED}15` }}
-              >
-                {bet.won ? (
-                  <Check className="w-2.5 h-2.5" style={{ color: GREEN }} />
-                ) : (
-                  <X className="w-2.5 h-2.5" style={{ color: RED }} />
-                )}
-              </div>
-
-              {/* Bet type badge */}
-              <span
-                className="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0"
-                style={{
-                  background: bet.bet_type.includes("exacta") || bet.bet_type.includes("tri") || bet.bet_type.includes("super")
-                    ? `${PURPLE}15` : `${GOLD}12`,
-                  color: bet.bet_type.includes("exacta") || bet.bet_type.includes("tri") || bet.bet_type.includes("super")
-                    ? PURPLE : GOLD,
-                }}
-              >
-                {bet.bet_type.replace("_", " ")}
-              </span>
-
-              {/* Selections */}
-              <div className="flex-1 min-w-0">
-                <div className="text-[10px] font-medium truncate" style={{ color: TEXT }}>
-                  {bet.selections.join(" → ")}
-                </div>
-                <div className="text-[9px]" style={{ color: TEXT_MUTED }}>
-                  ${bet.total_cost} wager
-                </div>
-              </div>
-
-              {/* Payout */}
-              <div className="text-right shrink-0">
-                <div className="text-[11px] font-bold font-mono" style={{ color: bet.won ? GREEN : RED }}>
-                  {bet.won ? `+$${(bet.payout - bet.total_cost).toLocaleString()}` : `-$${bet.total_cost}`}
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {/* Show more / less */}
-          {bets.length > 5 && (
-            <button
-              onClick={() => setExpanded(!expanded)}
-              className="w-full py-1.5 rounded-lg text-[10px] font-semibold flex items-center justify-center gap-1"
-              style={{ color: GOLD, border: `1px solid ${BORDER}` }}
-            >
-              <ChevronDown
-                className={`w-3 h-3 transition-transform ${expanded ? "rotate-180" : ""}`}
-              />
-              {expanded ? "Show Less" : `Show All ${bets.length} Bets`}
-            </button>
-          )}
-        </div>
-      )}
     </div>
   );
 }
@@ -2648,117 +2418,127 @@ export default function LiveRacingPage() {
               </div>
             </div>
 
-            {/* ──── Right: Stats + Next Race ──── */}
-            <div className="lg:col-span-3 space-y-4">
-              {/* User Stats */}
-              {user && (
-                <div className="p-4 rounded-2xl sticky top-20" style={{ background: BG_WHITE, border: `1.5px solid ${BORDER}` }}>
-                  <UserStats user={user} />
-
-                  {/* Next race countdown — large styled digital clock */}
-                  <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${BORDER}` }}>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5" style={{ color: BLUE }} />
-                        <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: TEXT_SEC }}>
-                          Next Race
-                        </span>
+            {/* ──── Right: Sticky sidebar with all competition info ──── */}
+            <div className="lg:col-span-3">
+              <div className="sticky top-20 space-y-3 max-h-[calc(100vh-6rem)] overflow-y-auto pr-1" style={{ scrollbarWidth: "thin" }}>
+                {/* Compact player card + bankroll */}
+                {user && (
+                  <div className="p-3 rounded-2xl" style={{ background: BG_WHITE, border: `1.5px solid ${BORDER}` }}>
+                    <div className="flex items-center gap-3 mb-2">
+                      <div
+                        className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
+                        style={{ background: `${GOLD}20`, color: GOLD, border: `2px solid ${GOLD}40` }}
+                      >
+                        {user.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-bold truncate" style={{ color: TEXT }}>{user.name}</div>
+                        <div className="text-[10px]" style={{ color: TEXT_MUTED }}>
+                          {user.school && <>{user.school}</>}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-lg font-bold font-mono" style={{ color: GOLD }}>
+                          <AnimatedBalance value={user.bankroll} />
+                        </div>
+                        <div className="text-[9px] font-mono" style={{ color: user.totalProfit >= 0 ? GREEN : RED }}>
+                          {user.totalProfit >= 0 ? "+" : ""}{user.totalProfit} profit
+                        </div>
                       </div>
                     </div>
-                    {/* Large countdown clock */}
-                    <div className="text-center py-2 rounded-xl mb-3" style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}>
-                      <div className="text-2xl font-mono font-bold" style={{ color: BLUE, textShadow: `0 0 20px ${BLUE}30` }}>
-                        {formatTimer(Math.max(0, Math.ceil(CYCLE_DURATION - getTimeInCycle())))}
+
+                    {/* Compact stats row */}
+                    <div className="flex gap-1.5 mb-2">
+                      <div className="flex-1 py-1.5 rounded-lg text-center" style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}>
+                        <div className="text-[9px] uppercase" style={{ color: TEXT_MUTED }}>Races</div>
+                        <div className="text-xs font-bold font-mono" style={{ color: TEXT }}>{user.racesPlayed}</div>
+                      </div>
+                      <div className="flex-1 py-1.5 rounded-lg text-center" style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}>
+                        <div className="text-[9px] uppercase" style={{ color: TEXT_MUTED }}>Best Win</div>
+                        <div className="text-xs font-bold font-mono" style={{ color: GOLD }}>${user.biggestWin}</div>
+                      </div>
+                      <div className="flex-1 py-1.5 rounded-lg text-center" style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}>
+                        <div className="text-[9px] uppercase" style={{ color: TEXT_MUTED }}>Next Race</div>
+                        <div className="text-xs font-bold font-mono" style={{ color: BLUE }}>
+                          {formatTimer(Math.max(0, Math.ceil(CYCLE_DURATION - getTimeInCycle())))}
+                        </div>
                       </div>
                     </div>
 
-                    {/* Betting phase stepper */}
-                    <div className="flex items-center gap-1">
+                    {/* Phase stepper */}
+                    <div className="flex items-center gap-0.5">
                       {(["betting", "post_parade", "racing", "results"] as Phase[]).map((p, idx) => {
-                        const labels = ["Betting", "Post", "Race", "Results"];
+                        const labels = ["Bet", "Post", "Race", "Results"];
                         const isActive = p === phase;
                         const isPast = ["betting", "post_parade", "racing", "results"].indexOf(phase) > idx;
                         const stepColor = isActive ? phaseBadgeColor : isPast ? GOLD : TEXT_MUTED;
                         return (
-                          <div key={p} className="flex-1 flex flex-col items-center gap-1">
+                          <div key={p} className="flex-1 flex flex-col items-center gap-0.5">
                             <div
-                              className={`w-full h-1.5 rounded-full ${isActive ? "animate-stepper-pulse" : ""}`}
-                              style={{
-                                background: isActive ? stepColor : isPast ? `${GOLD}40` : BORDER,
-                              }}
+                              className={`w-full h-1 rounded-full ${isActive ? "animate-stepper-pulse" : ""}`}
+                              style={{ background: isActive ? stepColor : isPast ? `${GOLD}40` : BORDER }}
                             />
-                            <span className="text-[8px] font-semibold uppercase" style={{ color: isActive ? stepColor : TEXT_MUTED }}>
+                            <span className="text-[7px] font-semibold uppercase" style={{ color: isActive ? stepColor : TEXT_MUTED }}>
                               {labels[idx]}
                             </span>
                           </div>
                         );
                       })}
                     </div>
-                  </div>
 
-                  {/* Reset bankroll */}
-                  {user.bankroll <= 0 && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="mt-3"
-                    >
+                    {/* Reset bankroll */}
+                    {user.bankroll <= 0 && (
                       <button
                         onClick={resetBankroll}
-                        className="w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2"
+                        className="w-full mt-2 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1"
                         style={{ background: RED, color: "#fff" }}
                       >
-                        <RotateCcw className="w-3.5 h-3.5" />
+                        <RotateCcw className="w-3 h-3" />
                         Busted! Reset to $1,000
                       </button>
-                    </motion.div>
-                  )}
+                    )}
+                  </div>
+                )}
 
-                  {/* Switch account / reset */}
-                  <div className="mt-3 flex gap-2">
+                {/* Leaderboard — always visible, most important */}
+                <div className="p-3 rounded-2xl" style={{ background: BG_WHITE, border: `1.5px solid ${BORDER}` }}>
+                  <SharedLeaderboard
+                    entries={leaderboard}
+                    schoolStandings={schoolStandings}
+                    currentUserId={user?.id}
+                    connected={lbConnected}
+                    loading={lbLoading}
+                  />
+                </div>
+
+                {/* Recent Wins — live social proof */}
+                {recentWins.length > 0 && (
+                  <div className="p-3 rounded-2xl" style={{ background: BG_WHITE, border: `1.5px solid ${BORDER}` }}>
+                    <LiveActivityFeed wins={recentWins} />
+                  </div>
+                )}
+
+                {/* Compact actions row */}
+                {user && (
+                  <div className="flex gap-2">
                     <button
                       onClick={() => setShowNameEntry(true)}
                       className="flex-1 py-2 rounded-lg text-[10px] font-medium flex items-center justify-center gap-1"
-                      style={{ color: TEXT_MUTED, border: `1px solid ${BORDER}` }}
+                      style={{ color: TEXT_MUTED, background: BG_WHITE, border: `1px solid ${BORDER}` }}
                     >
                       <LogIn className="w-3 h-3" />
-                      Switch Account
+                      Switch
                     </button>
                     <button
                       onClick={resetBankroll}
                       className="flex-1 py-2 rounded-lg text-[10px] font-medium flex items-center justify-center gap-1"
-                      style={{ color: TEXT_MUTED, border: `1px solid ${BORDER}` }}
+                      style={{ color: TEXT_MUTED, background: BG_WHITE, border: `1px solid ${BORDER}` }}
                     >
                       <RotateCcw className="w-3 h-3" />
-                      Reset Stats
+                      Reset
                     </button>
                   </div>
-                </div>
-              )}
-
-              {/* Live Activity Feed */}
-              {recentWins.length > 0 && (
-                <div className="p-4 rounded-2xl" style={{ background: BG_WHITE, border: `1.5px solid ${BORDER}` }}>
-                  <LiveActivityFeed wins={recentWins} />
-                </div>
-              )}
-
-              {/* Bet History */}
-              {user && (
-                <div className="p-4 rounded-2xl" style={{ background: BG_WHITE, border: `1.5px solid ${BORDER}` }}>
-                  <BetHistoryPanel playerId={user.id} />
-                </div>
-              )}
-
-              {/* Shared Leaderboard */}
-              <div className="p-4 rounded-2xl" style={{ background: BG_WHITE, border: `1.5px solid ${BORDER}` }}>
-                <SharedLeaderboard
-                  entries={leaderboard}
-                  schoolStandings={schoolStandings}
-                  currentUserId={user?.id}
-                  connected={lbConnected}
-                  loading={lbLoading}
-                />
+                )}
               </div>
             </div>
           </div>
