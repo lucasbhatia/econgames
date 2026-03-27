@@ -486,7 +486,7 @@ function calculateBetPayout(bet: Bet, finishOrder: string[], odds: RaceCard["odd
       if (bet.horseNames[0] === first && bet.horseNames[1] === second) {
         const o1 = odds[first]?.win ?? 2;
         const o2 = odds[second]?.win ?? 2;
-        return { won: true, payout: Math.round(bet.amount * o1 * o2 * 0.6) };
+        return { won: true, payout: Math.min(Math.round(bet.amount * o1 * o2 * 0.6), bet.amount * 500) };
       }
       return { won: false, payout: 0 };
 
@@ -495,8 +495,8 @@ function calculateBetPayout(bet: Bet, finishOrder: string[], odds: RaceCard["odd
       if (bet.horseNames.every((n) => top2.includes(n))) {
         const o1 = odds[first]?.win ?? 2;
         const o2 = odds[second]?.win ?? 2;
-        // Box pays less since more combinations
-        return { won: true, payout: Math.round(bet.amount * o1 * o2 * 0.6) };
+        // Box: same per-combo payout as straight (user pays for more combos)
+        return { won: true, payout: Math.min(Math.round(bet.amount * o1 * o2 * 0.6), bet.amount * 500) };
       }
       return { won: false, payout: 0 };
     }
@@ -506,7 +506,7 @@ function calculateBetPayout(bet: Bet, finishOrder: string[], odds: RaceCard["odd
         const o1 = odds[first]?.win ?? 2;
         const o2 = odds[second]?.win ?? 2;
         const o3 = odds[third]?.win ?? 2;
-        return { won: true, payout: Math.round(bet.amount * o1 * o2 * o3 * 0.4) };
+        return { won: true, payout: Math.min(Math.round(bet.amount * o1 * o2 * o3 * 0.4), bet.amount * 500) };
       }
       return { won: false, payout: 0 };
 
@@ -516,7 +516,7 @@ function calculateBetPayout(bet: Bet, finishOrder: string[], odds: RaceCard["odd
         const o1 = odds[first]?.win ?? 2;
         const o2 = odds[second]?.win ?? 2;
         const o3 = odds[third]?.win ?? 2;
-        return { won: true, payout: Math.round(bet.amount * o1 * o2 * o3 * 0.4) };
+        return { won: true, payout: Math.min(Math.round(bet.amount * o1 * o2 * o3 * 0.4), bet.amount * 500) };
       }
       return { won: false, payout: 0 };
     }
@@ -529,7 +529,7 @@ function calculateBetPayout(bet: Bet, finishOrder: string[], odds: RaceCard["odd
           const o1 = odds[first]?.win ?? 2;
           const o2 = odds[second]?.win ?? 2;
           const o3 = odds[third]?.win ?? 2;
-          return { won: true, payout: Math.round(bet.amount * o1 * o2 * o3 * 0.45) };
+          return { won: true, payout: Math.min(Math.round(bet.amount * o1 * o2 * o3 * 0.45), bet.amount * 500) };
         }
       }
       return { won: false, payout: 0 };
@@ -542,7 +542,7 @@ function calculateBetPayout(bet: Bet, finishOrder: string[], odds: RaceCard["odd
         const o2 = odds[second]?.win ?? 2;
         const o3 = odds[third]?.win ?? 2;
         const o4 = odds[fourth]?.win ?? 2;
-        return { won: true, payout: Math.round(bet.amount * o1 * o2 * o3 * o4 * 0.3) };
+        return { won: true, payout: Math.min(Math.round(bet.amount * o1 * o2 * o3 * o4 * 0.3), bet.amount * 500) };
       }
       return { won: false, payout: 0 };
 
@@ -553,7 +553,7 @@ function calculateBetPayout(bet: Bet, finishOrder: string[], odds: RaceCard["odd
         const o2 = odds[second]?.win ?? 2;
         const o3 = odds[third]?.win ?? 2;
         const o4 = odds[fourth]?.win ?? 2;
-        return { won: true, payout: Math.round(bet.amount * o1 * o2 * o3 * o4 * 0.3) };
+        return { won: true, payout: Math.min(Math.round(bet.amount * o1 * o2 * o3 * o4 * 0.3), bet.amount * 500) };
       }
       return { won: false, payout: 0 };
     }
@@ -1041,11 +1041,15 @@ function BetSlipBuilder({
     if (betType === "place") return amount * (race.odds[selectedHorses[0]]?.place ?? 1.5);
     if (betType === "show") return amount * (race.odds[selectedHorses[0]]?.show ?? 1.2);
 
-    // Exotic estimate
+    // Exotic estimate — multipliers match calculateBetPayout
     const horseOdds = selectedHorses.map((n) => race.odds[n]?.win ?? 2);
     const product = horseOdds.reduce((a, b) => a * b, 1);
-    const multiplier = betType.includes("superfecta") ? 0.3 : betType.includes("trifecta") ? 0.4 : 0.6;
-    return Math.round(amount * product * multiplier);
+    const multiplier = betType.includes("superfecta") ? 0.3
+      : betType === "trifecta_key" ? 0.45
+      : betType.includes("trifecta") ? 0.4
+      : 0.6;
+    // Cap exotic payouts at 500x the wager
+    return Math.min(Math.round(amount * product * multiplier), amount * 500);
   }, [canPlace, betType, selectedHorses, amount, race.odds]);
 
   const straightTypes: BetType[] = ["win", "place", "show"];
