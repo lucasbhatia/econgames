@@ -198,65 +198,61 @@ export default function ProfilesPage() {
               <motion.div key={horse.name} variants={item}>
                 <Link
                   href={`/profiles/${slug}`}
-                  className="block rounded-xl border border-[#e5e2db] bg-white hover:shadow-lg hover:border-[#b8941f]/30 transition-all group"
+                  className="block rounded-2xl border border-[#e5e2db] bg-white hover:shadow-xl hover:border-[#b8941f]/40 transition-all group overflow-hidden"
                 >
-                  <div className="p-5">
-                    {/* Horse photo + name */}
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="w-16 h-16 rounded-xl overflow-hidden border-2 shrink-0" style={{ borderColor: horse.color }}>
-                        <Image
-                          src={horse.imageUrl}
-                          alt={horse.name}
-                          width={64}
-                          height={64}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="text-lg font-semibold text-[#1a1a2a] group-hover:text-[#b8941f] transition-colors">
-                          {horse.name}
-                        </h3>
-                        <span
-                          className="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium mt-1"
-                          style={{ backgroundColor: styleColor.bg, color: styleColor.text }}
-                        >
-                          {horse.runningStyle}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Speed Curve */}
-                    <div className="mb-4">
-                      <SpeedCurve data={horse.speedCurve} color={horse.color} width={200} height={40} />
-                    </div>
-
-                    {/* Stats Row */}
-                    <div className="grid grid-cols-3 gap-3 mb-4">
-                      <div className="text-center">
-                        <p className="font-mono text-lg text-[#1a1a2a]">{horse.topSpeed.toFixed(1)}</p>
-                        <p className="text-xs text-[#9ca3af]">Top Speed</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="font-mono text-lg text-[#1a1a2a]">{horse.strideEfficiency.toFixed(2)}</p>
-                        <p className="text-xs text-[#9ca3af]">Efficiency</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="font-mono text-lg text-[#1a1a2a]">{horse.avgFinish.toFixed(1)}</p>
-                        <p className="text-xs text-[#9ca3af]">Avg Finish</p>
-                      </div>
-                    </div>
-
-                    {/* Form dots + View link */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs text-[#9ca3af] mr-1">Form</span>
-                        {horse.recentForm.slice(0, 5).map((r, i) => (
-                          <span key={i} className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: formColor(r.finish) }} />
-                        ))}
-                      </div>
-                      <span className="flex items-center gap-1 text-xs text-[#b8941f] font-medium group-hover:gap-2 transition-all">
-                        View Profile <ChevronRight className="w-3 h-3" />
+                  {/* Large horse image — player card style */}
+                  <div className="relative w-full aspect-[4/3] overflow-hidden" style={{ background: `${horse.color}08` }}>
+                    <Image
+                      src={horse.imageUrl}
+                      alt={horse.name}
+                      width={400}
+                      height={300}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    {/* Running style badge overlay */}
+                    <div className="absolute top-3 left-3">
+                      <span
+                        className="inline-block rounded-full px-2.5 py-1 text-[11px] font-semibold backdrop-blur-sm"
+                        style={{ backgroundColor: `${styleColor.text}dd`, color: "#fff" }}
+                      >
+                        {horse.runningStyle}
                       </span>
+                    </div>
+                    {/* Form dots overlay */}
+                    <div className="absolute top-3 right-3 flex gap-1">
+                      {horse.recentForm.slice(0, 5).map((r, i) => (
+                        <span key={i} className="inline-block h-2.5 w-2.5 rounded-full border border-white/30" style={{ backgroundColor: formColor(r.finish) }} />
+                      ))}
+                    </div>
+                    {/* Silk color strip at bottom */}
+                    <div className="absolute bottom-0 left-0 right-0 h-1" style={{ background: horse.color }} />
+                  </div>
+
+                  {/* Card body */}
+                  <div className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-lg font-bold text-[#1a1a2a] group-hover:text-[#b8941f] transition-colors">
+                        {horse.name}
+                      </h3>
+                      <ChevronRight className="w-4 h-4 text-[#b8941f] opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+
+                    {/* Key stats — clean 3-column */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="text-center py-2 rounded-lg" style={{ background: "#f8f6f2" }}>
+                        <p className="font-mono text-base font-bold text-[#1a1a2a]">{horse.topSpeed.toFixed(1)}</p>
+                        <p className="text-[10px] text-[#9ca3af] uppercase">Top Speed</p>
+                      </div>
+                      <div className="text-center py-2 rounded-lg" style={{ background: "#f8f6f2" }}>
+                        <p className="font-mono text-base font-bold text-[#1a1a2a]">{horse.strideEfficiency.toFixed(2)}</p>
+                        <p className="text-[10px] text-[#9ca3af] uppercase">Efficiency</p>
+                      </div>
+                      <div className="text-center py-2 rounded-lg" style={{ background: "#f8f6f2" }}>
+                        <p className="font-mono text-base font-bold" style={{ color: horse.avgFinish <= 3 ? "#16a34a" : horse.avgFinish <= 5 ? "#b8941f" : "#1a1a2a" }}>
+                          {horse.avgFinish.toFixed(1)}
+                        </p>
+                        <p className="text-[10px] text-[#9ca3af] uppercase">Avg Finish</p>
+                      </div>
                     </div>
                   </div>
                 </Link>
