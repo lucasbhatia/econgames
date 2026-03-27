@@ -53,35 +53,31 @@ function isConfigured(): boolean {
 }
 
 /** Compute school standings from player data.
- *  Schools are ranked by total profit from profitable players (bankroll > 1000).
- *  Only players who are up count toward school score. */
+ *  Schools ranked by total profit across all their players.
+ *  Only schools with at least 1 player who has played a race are shown. */
 function computeSchoolStandings(players: LeaderboardEntry[]): SchoolStanding[] {
-  const schoolMap = new Map<string, { allPlayers: LeaderboardEntry[]; profitablePlayers: LeaderboardEntry[] }>();
+  const schoolMap = new Map<string, LeaderboardEntry[]>();
 
   for (const p of players) {
     if (!p.school) continue;
     const existing = schoolMap.get(p.school);
-    const isProfitable = p.bankroll > 1000;
     if (existing) {
-      existing.allPlayers.push(p);
-      if (isProfitable) existing.profitablePlayers.push(p);
+      existing.push(p);
     } else {
-      schoolMap.set(p.school, {
-        allPlayers: [p],
-        profitablePlayers: isProfitable ? [p] : [],
-      });
+      schoolMap.set(p.school, [p]);
     }
   }
 
   const standings: SchoolStanding[] = [];
-  for (const [school, data] of schoolMap) {
-    // School score = sum of profit from profitable players only
-    const totalProfit = data.profitablePlayers.reduce((s, p) => s + p.total_profit, 0);
-    const avgBankroll = data.allPlayers.reduce((s, p) => s + p.bankroll, 0) / data.allPlayers.length;
-    const topPlayer = data.allPlayers.sort((a, b) => b.total_profit - a.total_profit)[0];
+  for (const [school, schoolPlayers] of schoolMap) {
+    // Only include schools where at least 1 player has played
+    const activePlayers = schoolPlayers.filter(p => p.races_played > 0);
+    const totalProfit = schoolPlayers.reduce((s, p) => s + p.total_profit, 0);
+    const avgBankroll = schoolPlayers.reduce((s, p) => s + p.bankroll, 0) / schoolPlayers.length;
+    const topPlayer = [...schoolPlayers].sort((a, b) => b.total_profit - a.total_profit)[0];
     standings.push({
       school,
-      players: data.allPlayers.length,
+      players: schoolPlayers.length,
       totalProfit: Math.round(totalProfit),
       avgBankroll: Math.round(avgBankroll),
       topPlayer: topPlayer?.name ?? "",

@@ -1762,44 +1762,48 @@ function SharedLeaderboard({
       {tab === "schools" && (
         <div className="space-y-1">
           {schoolStandings.length === 0 ? (
-            <p className="text-xs text-center py-3" style={{ color: TEXT_MUTED }}>No school data yet</p>
+            <p className="text-xs text-center py-3" style={{ color: TEXT_MUTED }}>No school data yet — place bets to represent your school!</p>
           ) : schoolStandings.slice(0, 10).map((school, i) => (
             <motion.div
               key={school.school}
               layout
-              className="px-2.5 py-2.5 rounded-lg"
-              style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}
+              className="px-2.5 py-2 rounded-lg"
+              style={{
+                background: i === 0 ? `${GOLD}06` : BG_WHITE,
+                border: `1px solid ${i === 0 ? GOLD : BORDER}`,
+              }}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 min-w-0">
-                  <div
-                    className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[9px] font-bold"
-                    style={{
-                      background: i === 0 ? `${GOLD}20` : i < 3 ? `${TEXT_MUTED}15` : BG_CARD,
-                      color: i === 0 ? GOLD : TEXT_SEC,
-                    }}
-                  >
-                    {i + 1}
+              <div className="flex items-center gap-2">
+                {/* Rank */}
+                <div
+                  className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[9px] font-bold"
+                  style={{
+                    background: i === 0 ? GOLD : i < 3 ? `${TEXT_MUTED}20` : BG_CARD,
+                    color: i === 0 ? "#fff" : TEXT_SEC,
+                  }}
+                >
+                  {i + 1}
+                </div>
+
+                {/* School info */}
+                <div className="flex-1 min-w-0">
+                  <div className="text-[11px] font-bold truncate" style={{ color: i === 0 ? GOLD : TEXT }}>
+                    {school.school}
                   </div>
-                  <div className="min-w-0">
-                    <div className="text-[11px] font-bold truncate" style={{ color: TEXT }}>
-                      {school.school}
-                    </div>
-                    <div className="text-[9px]" style={{ color: TEXT_MUTED }}>
-                      {school.players} player{school.players !== 1 ? "s" : ""} · Top: {school.topPlayer}
-                    </div>
+                  <div className="text-[9px] flex items-center gap-1" style={{ color: TEXT_MUTED }}>
+                    <span>{school.players} player{school.players !== 1 ? "s" : ""}</span>
+                    <span>·</span>
+                    <span>Avg ${school.avgBankroll.toLocaleString()}</span>
                   </div>
                 </div>
-                <div className="text-right shrink-0 ml-2">
-                  <div className="text-[11px] font-bold font-mono px-1.5 py-0.5 rounded-full"
-                    style={{
-                      background: school.totalProfit >= 0 ? `${GREEN}12` : `${RED}12`,
-                      color: school.totalProfit >= 0 ? GREEN : RED,
-                    }}>
-                    {school.totalProfit >= 0 ? "+" : ""}${Math.abs(school.totalProfit).toLocaleString()}
+
+                {/* Profit */}
+                <div className="text-right shrink-0">
+                  <div className="text-[11px] font-bold font-mono" style={{ color: school.totalProfit > 0 ? GREEN : school.totalProfit < 0 ? RED : TEXT_MUTED }}>
+                    {school.totalProfit > 0 ? "+" : ""}{school.totalProfit === 0 ? "$0" : `$${Math.abs(school.totalProfit).toLocaleString()}`}
                   </div>
-                  <div className="text-[9px] font-mono mt-0.5" style={{ color: TEXT_MUTED }}>
-                    avg ${school.avgBankroll.toLocaleString()}
+                  <div className="text-[9px]" style={{ color: TEXT_MUTED }}>
+                    Top: {school.topPlayer}
                   </div>
                 </div>
               </div>
