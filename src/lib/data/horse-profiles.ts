@@ -494,7 +494,12 @@ const highCamp: HorseProfile = {
   ],
 };
 
-// ── Additional GPS-Profiled Horses ─────────────────────────────────────────
+// ── Additional Horses (DEMO DATA — not from live GPS pipeline) ─────────────
+// AUDIT NOTE: These 10 horses have hand-authored speed/stride metrics for
+// demonstration purposes. They are NOT derived from real GPS gate data.
+// When HORSE_SPEED_FIGURES from the pipeline contains a matching horse,
+// the pipeline values take precedence on the profile page and in the
+// live race Monte Carlo blend.
 
 const firestormKing: HorseProfile = {
   name: "Firestorm King",

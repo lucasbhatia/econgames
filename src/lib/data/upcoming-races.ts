@@ -1,5 +1,8 @@
-// Upcoming races with entries, speed figures, and profile references
-// Demonstrates GPS-tracked vs non-GPS tracks for the extension concept
+// Upcoming races with entries, speed figures, and profile references.
+// AUDIT NOTE: speedFigure values below are BASELINE estimates for the preview UI.
+// When PIPELINE_ACTIVE is true, the preview page overrides these with computed
+// values from HORSE_SPEED_FIGURES (derived from real GPS pipeline data).
+// Horses without pipeline data keep these baselines.
 
 import type { RunningStyle } from "./horse-profiles";
 

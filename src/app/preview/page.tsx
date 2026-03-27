@@ -13,7 +13,7 @@ import {
 import Link from "next/link";
 import { UPCOMING_RACES, type UpcomingRace, type RaceEntry } from "@/lib/data/upcoming-races";
 import type { RunningStyle } from "@/lib/data/horse-profiles";
-import { PIPELINE_ACTIVE, TRANSFER_DIAGNOSTICS, MODEL_DIAGNOSTICS } from "@/lib/data/pipeline-output";
+import { PIPELINE_ACTIVE, TRANSFER_DIAGNOSTICS, MODEL_DIAGNOSTICS, HORSE_SPEED_FIGURES } from "@/lib/data/pipeline-output";
 import { GlossaryTerm } from "@/components/GlossaryTerm";
 
 /* ── Style helpers ──────────────────────────────────────────────────────── */
@@ -272,16 +272,20 @@ export default function PreviewPage() {
     return map;
   }, [race, pipelineLookup]);
 
-  // Merge pipeline speed figures onto race entries when available
+  // AUDIT FIX [CRITICAL]: Override hardcoded speedFigure with pipeline-computed values.
+  // HORSE_SPEED_FIGURES contains real figures from 12,961 horses in the GPS pipeline.
+  // The hardcoded values in upcoming-races.ts are baselines for horses without pipeline data.
   const enrichedEntries = useMemo(() => {
     return race.entries.map((entry) => {
-      const pipeline = pipelineLookup.get(entry.horse);
-      if (pipeline) {
-        return { ...entry, speedFigure: Math.round(pipeline.speedFig) };
+      if (PIPELINE_ACTIVE) {
+        const figs = HORSE_SPEED_FIGURES[entry.horse];
+        if (figs && figs.avg_last_5 > 0) {
+          return { ...entry, speedFigure: Math.round(figs.avg_last_5) };
+        }
       }
       return entry;
     });
-  }, [race.entries, pipelineLookup]);
+  }, [race]);
 
   const pace = useMemo(() => projectPace(enrichedEntries), [enrichedEntries]);
 
