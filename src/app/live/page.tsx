@@ -1130,7 +1130,7 @@ function BetSlipBuilder({
       </div>
 
       {/* Horse Selection */}
-      <div className="space-y-1 max-h-[280px] overflow-y-auto pr-1">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-[400px] overflow-y-auto pr-1">
         {race.horses.map((horse, i) => {
           const isSelected = selectedHorses.includes(horse.name);
           const orderIdx = selectedHorses.indexOf(horse.name);
@@ -2443,8 +2443,9 @@ export default function LiveRacingPage() {
         {/* ──────────── Main Layout ──────────── */}
         {race && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 pb-8">
-            {/* ──── Left: Unified Race Card (Odds + Bet / Results) ──── */}
-            <div className="lg:col-span-5 space-y-4">
+            {/* ──── Left Panel ──── */}
+            {/* Betting: takes 9 cols (no center track). Other phases: takes 4 cols */}
+            <div className={`space-y-4 ${phase === "betting" ? "lg:col-span-9" : "lg:col-span-4"}`}>
               {/* BETTING PHASE: One unified light panel — odds table + bet controls */}
               {phase === "betting" && user && (
                 <div className="p-4 rounded-2xl" style={{ background: BG_WHITE, border: `1.5px solid ${BORDER}` }}>
@@ -2649,8 +2650,8 @@ export default function LiveRacingPage() {
               )}
             </div>
 
-            {/* ──── Center: Race Track ──── */}
-            <div className="lg:col-span-4">
+            {/* ──── Center: Race Track (hidden during betting, 5 cols otherwise) ──── */}
+            <div className={`${phase === "betting" ? "hidden" : "lg:col-span-5"}`}>
               <div className="relative rounded-2xl overflow-hidden" style={{ border: `1.5px solid ${BORDER}` }}>
                 {/* Win celebration overlay */}
                 <AnimatePresence>
@@ -2679,31 +2680,7 @@ export default function LiveRacingPage() {
                   />
                 )}
 
-                {/* During betting: show a clean preview */}
-                {phase === "betting" && (
-                  <div className="p-6 text-center" style={{ background: BG_CARD, minHeight: 280 }}>
-                    <div className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: GOLD }}>
-                      {race.track.name}
-                    </div>
-                    <p className="text-sm mb-4" style={{ color: TEXT_SEC }}>
-                      {race.distance}F {race.surface} · {race.condition}
-                    </p>
-                    <div className="flex items-center justify-center gap-1.5 mb-6">
-                      <Flag className="w-4 h-4" style={{ color: GOLD }} />
-                      <span className="text-sm font-mono font-bold" style={{ color: TEXT }}>Race starts in {formatTimer(timer)}</span>
-                    </div>
-                    {/* Horse lineup */}
-                    <div className="space-y-1 max-w-sm mx-auto">
-                      {race.horses.map((horse, i) => (
-                        <div key={horse.name} className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: BG_WHITE, border: `1px solid ${BORDER}` }}>
-                          <div className="w-4 h-4 rounded-full shrink-0" style={{ background: horse.color }} />
-                          <span className="text-[11px] font-medium flex-1 truncate" style={{ color: TEXT }}>{horse.name}</span>
-                          <span className="text-[10px] font-mono font-bold" style={{ color: GOLD }}>{formatOddsDisplay(race.odds[horse.name]?.win ?? 2)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                {/* No content during betting — center column is hidden */}
               </div>
             </div>
 
