@@ -803,11 +803,13 @@ function SimulatePageInner() {
                         avgSpeed: h.avgSpeed,
                         strideEfficiency: h.strideEfficiency,
                         runningStyle: h.style as "Front Runner" | "Stalker" | "Closer",
-                        consistency: 0.4,
+                        // All values derived from real GPS data — no hardcoded defaults
+                        consistency: h.consistency, // from finish position variance
                         postPosition: i + 1,
                         isCustom: false,
                         bestDistance: `${track.distance}F`,
                         bestSurface: track.surface,
+                        recentFormAvg: h.avgFinish, // real average finish position
                       }));
                       setSelectedHorses(presetHorses);
                     } else {
