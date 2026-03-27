@@ -15,6 +15,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import { PIPELINE_ACTIVE, getHorseSpeedFigures } from "@/lib/data/pipeline-output";
+import { humanSpeedFigure, humanSpeed } from "@/lib/glossary";
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 
@@ -229,15 +230,15 @@ export default function HorseProfilePage({
 
   const statsCards = [
     {
-      label: "Top Speed",
+      label: "Peak Speed",
       value: `${horse.topSpeed.toFixed(1)}`,
-      unit: "ft/s",
+      unit: `ft/s (${(horse.topSpeed * 0.6818).toFixed(0)} mph)`,
       icon: <Zap className="h-4 w-4 text-[#b8941f]" />,
     },
     {
-      label: "Avg Speed",
+      label: "Average Speed",
       value: `${horse.avgSpeed.toFixed(1)}`,
-      unit: "ft/s",
+      unit: `ft/s (${(horse.avgSpeed * 0.6818).toFixed(0)} mph)`,
       icon: <Activity className="h-4 w-4 text-[#b8941f]" />,
     },
     {
@@ -267,21 +268,21 @@ export default function HorseProfilePage({
     // Pipeline-computed speed figures (only if pipeline has been run and horse has data)
     ...(speedFigs ? [
       {
-        label: "Speed Figure",
+        label: "Speed Rating",
         value: `${speedFigs.career_best.toFixed(0)}`,
-        unit: "career best",
+        unit: speedFigs.career_best >= 110 ? "career best — elite" : speedFigs.career_best >= 100 ? "career best — above avg" : "career best (100 = average)",
         icon: <BarChart3 className="h-4 w-4 text-[#b8941f]" />,
       },
       {
-        label: "Recent Figure",
+        label: "Recent Rating",
         value: `${speedFigs.recent_best.toFixed(0)}`,
-        unit: `best of last 3`,
+        unit: speedFigs.recent_best >= 100 ? "best of last 3 — competitive" : "best of last 3 (100 = avg)",
         icon: <BarChart3 className="h-4 w-4 text-[#b8941f]" />,
       },
       {
-        label: "Avg Figure",
+        label: "Avg Rating",
         value: `${speedFigs.avg_last_5.toFixed(0)}`,
-        unit: `last ${Math.min(5, speedFigs.num_races)} races`,
+        unit: `across last ${Math.min(5, speedFigs.num_races)} races (100 = average)`,
         icon: null,
       },
     ] : []),
@@ -437,7 +438,7 @@ export default function HorseProfilePage({
         {/* Speed Curve */}
         <div className="rounded-xl bg-[#f8f6f2] border border-[#e5e2db] p-6 mb-6">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-[#9ca3af] mb-4">
-            Speed Curve (ft/s across race)
+            Speed Pattern — how fast this horse runs at each stage of the race
           </h3>
           <FullSpeedCurve data={horse.speedCurve} color={horse.color} />
         </div>

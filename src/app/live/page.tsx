@@ -899,7 +899,7 @@ function BetSlipBuilder({
                   <span className="px-1.5 py-0.5 rounded" style={{ background: `${horse.color}18`, color: horse.color, fontWeight: 600 }}>
                     {horse.runningStyle}
                   </span>
-                  <span>{horse.topSpeed.toFixed(1)} ft/s</span>
+                  <span>{(horse.topSpeed * 0.6818).toFixed(0)} mph</span>
                 </div>
               </div>
               <div className="text-right shrink-0">

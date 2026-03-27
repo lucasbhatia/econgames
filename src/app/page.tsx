@@ -11,6 +11,7 @@ import {
   Dices,
 } from "lucide-react";
 import { PIPELINE_ACTIVE, MODEL_DIAGNOSTICS } from "@/lib/data/pipeline-output";
+import { humanR2, humanMAE } from "@/lib/glossary";
 import {
   FEATURED_RACE,
   HORSE_COLORS,
@@ -208,21 +209,21 @@ export default function Home() {
                 <div className="rounded-xl bg-white border border-[#e5e2db] p-5 text-center">
                   <div className="text-xs font-bold uppercase text-[#9ca3af] mb-2">Traditional Only</div>
                   <div className="text-3xl font-mono font-bold text-[#6b7280]">
-                    {MODEL_DIAGNOSTICS.traditional_only.r2_val.toFixed(2)}
+                    {Math.round(MODEL_DIAGNOSTICS.traditional_only.r2_val * 100)}%
                   </div>
-                  <div className="text-xs text-[#9ca3af] mt-1">R² (accuracy)</div>
-                  <div className="text-sm font-mono text-[#6b7280] mt-2">
-                    MAE: {MODEL_DIAGNOSTICS.traditional_only.mae_val.toFixed(2)} positions
+                  <div className="text-xs text-[#9ca3af] mt-1">prediction accuracy</div>
+                  <div className="text-sm text-[#6b7280] mt-2">
+                    {humanMAE(MODEL_DIAGNOSTICS.traditional_only.mae_val)}
                   </div>
                 </div>
                 <div className="rounded-xl border-2 border-[#b8941f] bg-[#b8941f08] p-5 text-center">
                   <div className="text-xs font-bold uppercase text-[#b8941f] mb-2">GPS + Traditional</div>
                   <div className="text-3xl font-mono font-bold text-[#b8941f]">
-                    {MODEL_DIAGNOSTICS.ensemble.r2_val.toFixed(2)}
+                    {Math.round(MODEL_DIAGNOSTICS.ensemble.r2_val * 100)}%
                   </div>
-                  <div className="text-xs text-[#b8941f] mt-1">R² (accuracy)</div>
-                  <div className="text-sm font-mono text-[#1a1a2a] mt-2">
-                    MAE: {MODEL_DIAGNOSTICS.ensemble.mae_val.toFixed(2)} positions
+                  <div className="text-xs text-[#b8941f] mt-1">prediction accuracy</div>
+                  <div className="text-sm text-[#1a1a2a] mt-2">
+                    {humanMAE(MODEL_DIAGNOSTICS.ensemble.mae_val)}
                   </div>
                 </div>
                 <div className="rounded-xl bg-[#16a34a08] border border-[#16a34a30] p-5 text-center">
@@ -237,7 +238,7 @@ export default function Home() {
                 </div>
               </div>
               <p className="text-xs text-[#9ca3af] mt-4 text-center">
-                Trained on {MODEL_DIAGNOSTICS.n_train.toLocaleString()} races across 10 GPS-equipped tracks. Top GPS feature: early gate position (0.73 importance).
+                Trained on {MODEL_DIAGNOSTICS.n_train.toLocaleString()} real races across 10 GPS-equipped tracks. The model&apos;s most important GPS feature is the horse&apos;s speed rating — something traditional data alone can&apos;t provide.
               </p>
             </motion.div>
           )}

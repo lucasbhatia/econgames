@@ -112,7 +112,7 @@ function getRaceSummary(race: RaceData) {
     winner: `${winner.name} (${winner.odds !== null ? winner.odds + "-1" : "SCR"})`,
     pace: `${leader.name} set the pace through the middle stages`,
     keyMove: `${winner.name} finished ${winner.finish === 1 ? "1st" : ordinal(winner.finish)} from post ${winner.postPos}`,
-    topSpeed: `${topSpeedVal.toFixed(1)} ft/s (${topSpeedHorse}, gate ${topSpeedGate})`,
+    topSpeed: `${topSpeedVal.toFixed(1)} ft/s / ${(topSpeedVal * 0.6818).toFixed(0)} mph (${topSpeedHorse} at checkpoint ${topSpeedGate})`,
   };
 }
 

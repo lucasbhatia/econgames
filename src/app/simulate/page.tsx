@@ -607,27 +607,20 @@ function SimulatePageInner() {
         {/* Pipeline model stats — shown when pipeline has been run */}
         {PIPELINE_ACTIVE && (
           <div
-            className="mb-4 rounded-xl px-5 py-3 flex flex-wrap items-center gap-4"
+            className="mb-4 rounded-xl px-5 py-3 flex flex-wrap items-center gap-x-5 gap-y-1"
             style={{ backgroundColor: "#1a3a2a08", border: "1px solid #1a3a2a20" }}
           >
-            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#1a3a2a" }}>
-              Powered by
+            <span className="text-xs font-semibold" style={{ color: "#1a3a2a" }}>
+              GPS-powered predictions
             </span>
-            <span className="text-xs font-mono">
-              <span style={{ color: TEXT_SEC }}>Model R²:</span>{" "}
-              <span className="font-bold" style={{ color: TEXT }}>{MODEL_DIAGNOSTICS.ensemble.r2_val.toFixed(3)}</span>
+            <span className="text-xs" style={{ color: TEXT_SEC }}>
+              Trained on <strong style={{ color: TEXT }}>{MODEL_DIAGNOSTICS.n_train.toLocaleString()}</strong> races
             </span>
-            <span className="text-xs font-mono">
-              <span style={{ color: TEXT_SEC }}>MAE:</span>{" "}
-              <span className="font-bold" style={{ color: TEXT }}>{MODEL_DIAGNOSTICS.ensemble.mae_val.toFixed(2)}</span>
+            <span className="text-xs" style={{ color: TEXT_SEC }}>
+              Predicts finish within <strong style={{ color: TEXT }}>{MODEL_DIAGNOSTICS.ensemble.mae_val.toFixed(1)}</strong> positions
             </span>
-            <span className="text-xs font-mono">
-              <span style={{ color: TEXT_SEC }}>Top feature:</span>{" "}
-              <span style={{ color: GOLD }}>{Object.entries(MODEL_DIAGNOSTICS.ridge.feature_importance).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "N/A"}</span>
-            </span>
-            <span className="text-xs font-mono">
-              <span style={{ color: TEXT_SEC }}>Transfer R²:</span>{" "}
-              <span className="font-bold" style={{ color: TEXT }}>{TRANSFER_DIAGNOSTICS.overall_r2.toFixed(3)}</span>
+            <span className="text-xs" style={{ color: TEXT_SEC }}>
+              GPS adds <strong style={{ color: "#16a34a" }}>+{MODEL_DIAGNOSTICS.gps_added_value.r2_improvement_pct.toFixed(0)}%</strong> over traditional alone
             </span>
           </div>
         )}
