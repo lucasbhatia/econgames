@@ -7,6 +7,8 @@ import {
   Eye,
   Users,
   TrendingUp,
+  Zap,
+  Dices,
 } from "lucide-react";
 import {
   FEATURED_RACE,
@@ -92,25 +94,37 @@ export default function Home() {
       ═══════════════════════════════════════ */}
       <section className="py-20">
         <div className={S}>
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-5">
             {[
+              {
+                icon: Zap,
+                title: "Race Night",
+                href: "/live",
+                desc: "Live betting simulation with a $1,000 bankroll. Place win, place, show, and exotic bets. Compete against other schools on the leaderboard.",
+              },
               {
                 icon: Eye,
                 title: "Race X-Ray",
                 href: "/xray",
-                desc: "Replay any race and see exactly how fast each horse was running, where they gained or lost ground, and why the winner won. Like watching a race with X-ray vision.",
+                desc: "Replay any race and see exactly how fast each horse was running, where they gained or lost ground, and why the winner won.",
               },
               {
                 icon: Users,
                 title: "Horse Profiles",
                 href: "/profiles",
-                desc: "Every horse gets a profile card showing their racing personality — are they a fast starter who fades, or a slow starter who charges from behind? See their speed patterns and recent results.",
+                desc: "Every horse gets a profile showing their racing personality — front runner, stalker, or closer? See speed patterns and recent form.",
               },
               {
                 icon: TrendingUp,
                 title: "Race Preview",
                 href: "/preview",
-                desc: "Before a race happens, see which horses match up well based on their GPS data. Who\u2019s likely to set the early pace? Who has the closing speed to come from behind?",
+                desc: "See which horses match up well based on GPS data. Who sets the pace? Who has the closing speed to come from behind?",
+              },
+              {
+                icon: Dices,
+                title: "Simulate",
+                href: "/simulate",
+                desc: "Run Monte Carlo simulations with real horse data. Adjust distance, surface, and track bias to see win probabilities.",
               },
             ].map((card, i) => (
               <motion.div

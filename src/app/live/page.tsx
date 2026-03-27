@@ -6,8 +6,6 @@ import {
   Timer,
   Trophy,
   DollarSign,
-  Play,
-  ChevronRight,
   ChevronDown,
   Plus,
   Minus,
@@ -21,7 +19,6 @@ import {
   RotateCcw,
   AlertCircle,
   Clock,
-  Flag,
   Eye,
   Lock,
   Sparkles,
@@ -1359,13 +1356,12 @@ function PostParadeOverlay({ race, timer }: { race: RaceCard; timer: number }) {
         </div>
 
         <motion.div className="mt-6">
-          <motion.div
-            key={timer}
-            className="text-5xl font-mono font-bold animate-countdown-tick"
+          <div
+            className="text-5xl font-mono font-bold"
             style={{ color: GOLD }}
           >
             {timer}
-          </motion.div>
+          </div>
           <div className="text-xs uppercase tracking-wider mt-1" style={{ color: TEXT_MUTED }}>
             seconds to post
           </div>
@@ -1754,7 +1750,7 @@ function BetHistoryPanel({ playerId }: { playerId: string }) {
               key={bet.id}
               className="flex items-center gap-2 px-2.5 py-2 rounded-lg"
               style={{
-                background: bet.won ? `${GREEN}06` : BG_DARK,
+                background: bet.won ? `${GREEN}06` : BG_CARD,
                 border: `1px solid ${bet.won ? `${GREEN}20` : BORDER}`,
               }}
             >
@@ -1969,7 +1965,7 @@ function SharedLeaderboard({
                   <div
                     className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[9px] font-bold"
                     style={{
-                      background: i === 0 ? `${GOLD}20` : i < 3 ? `${TEXT_MUTED}15` : BG_DARK,
+                      background: i === 0 ? `${GOLD}20` : i < 3 ? `${TEXT_MUTED}15` : BG_CARD,
                       color: i === 0 ? GOLD : TEXT_SEC,
                     }}
                   >
