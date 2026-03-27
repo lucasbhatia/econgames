@@ -5,33 +5,39 @@ export interface Database {
         Row: {
           id: string;
           name: string;
+          school: string;
           bankroll: number;
           starting_bankroll: number;
           total_profit: number;
           races_played: number;
           biggest_win: number;
+          pin_hash: string | null;
           last_active: string;
           created_at: string;
         };
         Insert: {
           id: string;
           name: string;
+          school?: string;
           bankroll?: number;
           starting_bankroll?: number;
           total_profit?: number;
           races_played?: number;
           biggest_win?: number;
+          pin_hash?: string;
           last_active?: string;
           created_at?: string;
         };
         Update: {
           id?: string;
           name?: string;
+          school?: string;
           bankroll?: number;
           starting_bankroll?: number;
           total_profit?: number;
           races_played?: number;
           biggest_win?: number;
+          pin_hash?: string;
           last_active?: string;
         };
       };

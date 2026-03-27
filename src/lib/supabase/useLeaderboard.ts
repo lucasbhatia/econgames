@@ -22,7 +22,7 @@ export interface SchoolStanding {
   topPlayer: string;
 }
 
-interface PlayerUpsert {
+export interface PlayerUpsert {
   id: string;
   name: string;
   school: string;

@@ -27,6 +27,11 @@ import {
   Sparkles,
   CircleDot,
   Hash,
+  KeyRound,
+  History,
+  LogIn,
+  UserPlus,
+  ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -37,6 +42,9 @@ import type { SimHorse, SimResults, Surface, TrackBias } from "@/lib/simulation/
 import LiveRaceView from "@/components/arena/LiveRaceView";
 import { useLeaderboard } from "@/lib/supabase/useLeaderboard";
 import type { LeaderboardEntry, SchoolStanding } from "@/lib/supabase/useLeaderboard";
+import { hashPin } from "@/lib/auth/pin";
+import { registerPlayer, loginPlayer, fetchBetHistory } from "@/lib/supabase/auth";
+import type { BetHistoryRow } from "@/lib/supabase/auth";
 
 /* ================================================================== */
 /*  Constants                                                          */
@@ -644,23 +652,82 @@ function TimerRing({ seconds, total, phase, label }: { seconds: number; total: n
 }
 
 /* ================================================================== */
-/*  Name Entry Modal                                                   */
+/*  Auth Modal — New Player / Welcome Back with PIN                    */
 /* ================================================================== */
 
-function NameEntryModal({ onSubmit }: { onSubmit: (name: string, school: string) => void }) {
+function AuthModal({ onSubmit }: { onSubmit: (user: UserProfile) => void }) {
+  const [mode, setMode] = useState<"new" | "returning">("new");
   const [name, setName] = useState("");
   const [school, setSchool] = useState("");
+  const [pin, setPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     inputRef.current?.focus();
-  }, []);
+  }, [mode]);
 
-  const isValid = name.trim().length >= 2 && name.trim().length <= 20 && school !== "";
+  // Reset error when switching modes or changing fields
+  useEffect(() => { setError(""); }, [mode, name, school, pin, confirmPin]);
 
-  const handleSubmit = () => {
-    if (isValid) {
-      onSubmit(name.trim(), school);
+  const pinValid = pin.length === 4 && /^\d{4}$/.test(pin);
+  const isNewValid = name.trim().length >= 2 && name.trim().length <= 20 && school !== "" && pinValid && pin === confirmPin;
+  const isReturnValid = name.trim().length >= 2 && school !== "" && pinValid;
+  const isValid = mode === "new" ? isNewValid : isReturnValid;
+
+  const handlePinInput = (value: string, setter: (v: string) => void) => {
+    const cleaned = value.replace(/\D/g, "").slice(0, 4);
+    setter(cleaned);
+  };
+
+  const handleSubmit = async () => {
+    if (!isValid || loading) return;
+    setLoading(true);
+    setError("");
+
+    try {
+      if (mode === "new") {
+        const pinHash = await hashPin(pin);
+        const id = crypto.randomUUID();
+
+        const { success, error: regError } = await registerPlayer(id, name.trim(), school, pinHash);
+        if (!success && regError) {
+          setError(regError);
+          setLoading(false);
+          return;
+        }
+
+        const newUser = createUser(name.trim(), school);
+        newUser.id = id;
+        onSubmit(newUser);
+      } else {
+        const { player, error: loginError } = await loginPlayer(name.trim(), school, pin);
+        if (!player) {
+          setError(loginError ?? "Login failed. Please try again.");
+          setLoading(false);
+          return;
+        }
+
+        // Reconstruct UserProfile from Supabase data
+        const restoredUser: UserProfile = {
+          id: player.id,
+          name: player.name,
+          school: player.school,
+          bankroll: player.bankroll,
+          startingBankroll: 1000,
+          totalProfit: player.total_profit,
+          racesPlayed: player.races_played,
+          biggestWin: player.biggest_win,
+          history: [], // history is local-only, start fresh
+        };
+        onSubmit(restoredUser);
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -669,86 +736,245 @@ function NameEntryModal({ onSubmit }: { onSubmit: (name: string, school: string)
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(1,4,9,0.9)", backdropFilter: "blur(12px)" }}
+      style={{ background: "rgba(1,4,9,0.92)", backdropFilter: "blur(12px)" }}
     >
       <motion.div
         initial={{ scale: 0.9, y: 20 }}
         animate={{ scale: 1, y: 0 }}
         transition={{ type: "spring", damping: 25 }}
-        className="w-full max-w-md p-8 rounded-3xl space-y-6"
-        style={{ background: BG_CARD, border: `1px solid ${BORDER}`, boxShadow: `0 0 60px rgba(245,200,66,0.08)` }}
+        className="w-full max-w-md rounded-3xl overflow-hidden"
+        style={{ background: BG_CARD, border: `1px solid ${BORDER}`, boxShadow: `0 0 80px rgba(245,200,66,0.06)` }}
       >
-        <div className="text-center space-y-2">
-          <div
-            className="w-16 h-16 mx-auto rounded-2xl flex items-center justify-center mb-4"
-            style={{ background: `${GOLD}15`, border: `1px solid ${GOLD}30` }}
-          >
-            <Zap className="w-8 h-8" style={{ color: GOLD }} />
-          </div>
-          <h2 className="text-2xl font-bold" style={{ color: "#fff" }}>
-            Welcome to Race Night
-          </h2>
-          <p className="text-sm" style={{ color: TEXT_SEC }}>
-            $1,000 bankroll. New race every 6 minutes. Compete against other schools.
-          </p>
-        </div>
-
-        <div className="space-y-3">
-          <div>
-            <label className="text-xs font-semibold block mb-1.5" style={{ color: TEXT_SEC }}>Display Name</label>
-            <input
-              ref={inputRef}
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-              placeholder="Your name..."
-              maxLength={20}
-              className="w-full px-4 py-3 rounded-xl text-sm font-medium outline-none transition-all"
+        {/* Mode toggle tabs */}
+        <div className="flex" style={{ borderBottom: `1px solid ${BORDER}` }}>
+          {(["new", "returning"] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => { setMode(m); setError(""); setPin(""); setConfirmPin(""); }}
+              className="flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-semibold transition-all"
               style={{
-                background: BG_DARK,
-                border: `2px solid ${name.trim().length >= 2 ? GOLD : BORDER}`,
-                color: "#fff",
-              }}
-            />
-          </div>
-
-          <div>
-            <label className="text-xs font-semibold block mb-1.5" style={{ color: TEXT_SEC }}>School</label>
-            <select
-              value={school}
-              onChange={(e) => setSchool(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl text-sm font-medium outline-none transition-all appearance-none cursor-pointer"
-              style={{
-                background: BG_DARK,
-                border: `2px solid ${school ? GOLD : BORDER}`,
-                color: school ? "#fff" : TEXT_MUTED,
+                background: mode === m ? `${GOLD}08` : "transparent",
+                color: mode === m ? GOLD : TEXT_MUTED,
+                borderBottom: mode === m ? `2px solid ${GOLD}` : "2px solid transparent",
               }}
             >
-              <option value="">Select your school...</option>
-              {SCHOOLS.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </div>
-
-          <button
-            onClick={handleSubmit}
-            disabled={!isValid}
-            className="w-full py-3.5 rounded-xl text-base font-bold transition-all"
-            style={{
-              background: isValid ? GOLD : BORDER,
-              color: isValid ? "#0d1117" : TEXT_MUTED,
-              opacity: isValid ? 1 : 0.5,
-            }}
-          >
-            Enter the Track
-          </button>
+              {m === "new" ? <UserPlus className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
+              {m === "new" ? "New Player" : "Welcome Back"}
+            </button>
+          ))}
         </div>
 
-        <p className="text-[11px] text-center" style={{ color: TEXT_MUTED }}>
-          Your progress is saved locally. No account needed.
-        </p>
+        <div className="p-8 space-y-5">
+          {/* Header */}
+          <div className="text-center space-y-2">
+            <div
+              className="w-14 h-14 mx-auto rounded-2xl flex items-center justify-center"
+              style={{ background: `${GOLD}12`, border: `1px solid ${GOLD}25` }}
+            >
+              {mode === "new" ? (
+                <Zap className="w-7 h-7" style={{ color: GOLD }} />
+              ) : (
+                <KeyRound className="w-7 h-7" style={{ color: GOLD }} />
+              )}
+            </div>
+            <h2 className="text-xl font-bold" style={{ color: "#fff" }}>
+              {mode === "new" ? "Join Race Night" : "Welcome Back"}
+            </h2>
+            <p className="text-[13px]" style={{ color: TEXT_SEC }}>
+              {mode === "new"
+                ? "$1,000 bankroll. New race every 6 minutes."
+                : "Enter your name, school & PIN to restore your account."}
+            </p>
+          </div>
+
+          {/* Fields */}
+          <div className="space-y-3">
+            <div>
+              <label className="text-[11px] font-semibold uppercase tracking-wider block mb-1.5" style={{ color: TEXT_SEC }}>
+                Display Name
+              </label>
+              <input
+                ref={inputRef}
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+                placeholder="Your name..."
+                maxLength={20}
+                className="w-full px-4 py-3 rounded-xl text-sm font-medium outline-none transition-all"
+                style={{
+                  background: BG_DARK,
+                  border: `2px solid ${name.trim().length >= 2 ? `${GOLD}60` : BORDER}`,
+                  color: "#fff",
+                }}
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] font-semibold uppercase tracking-wider block mb-1.5" style={{ color: TEXT_SEC }}>
+                School
+              </label>
+              <select
+                value={school}
+                onChange={(e) => setSchool(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl text-sm font-medium outline-none transition-all appearance-none cursor-pointer"
+                style={{
+                  background: BG_DARK,
+                  border: `2px solid ${school ? `${GOLD}60` : BORDER}`,
+                  color: school ? "#fff" : TEXT_MUTED,
+                }}
+              >
+                <option value="">Select your school...</option>
+                {SCHOOLS.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* PIN input */}
+            <div>
+              <label className="text-[11px] font-semibold uppercase tracking-wider block mb-1.5" style={{ color: TEXT_SEC }}>
+                4-Digit PIN
+              </label>
+              <div className="flex gap-2">
+                {[0, 1, 2, 3].map((idx) => (
+                  <input
+                    key={idx}
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={pin[idx] ?? ""}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "");
+                      const newPin = pin.split("");
+                      newPin[idx] = val;
+                      const joined = newPin.join("").slice(0, 4);
+                      setPin(joined);
+                      // Auto-advance to next input
+                      if (val && idx < 3) {
+                        const next = e.target.parentElement?.children[idx + 1] as HTMLInputElement;
+                        next?.focus();
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Backspace" && !pin[idx] && idx > 0) {
+                        const prev = (e.target as HTMLElement).parentElement?.children[idx - 1] as HTMLInputElement;
+                        prev?.focus();
+                      }
+                    }}
+                    className="w-full aspect-square rounded-xl text-center text-xl font-mono font-bold outline-none transition-all"
+                    style={{
+                      background: BG_DARK,
+                      border: `2px solid ${pin[idx] ? `${GOLD}60` : BORDER}`,
+                      color: GOLD,
+                      maxWidth: 56,
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Confirm PIN (new only) */}
+            {mode === "new" && (
+              <div>
+                <label className="text-[11px] font-semibold uppercase tracking-wider block mb-1.5" style={{ color: TEXT_SEC }}>
+                  Confirm PIN
+                </label>
+                <div className="flex gap-2">
+                  {[0, 1, 2, 3].map((idx) => (
+                    <input
+                      key={idx}
+                      type="password"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={confirmPin[idx] ?? ""}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, "");
+                        const newPin = confirmPin.split("");
+                        newPin[idx] = val;
+                        const joined = newPin.join("").slice(0, 4);
+                        setConfirmPin(joined);
+                        if (val && idx < 3) {
+                          const next = e.target.parentElement?.children[idx + 1] as HTMLInputElement;
+                          next?.focus();
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Backspace" && !confirmPin[idx] && idx > 0) {
+                          const prev = (e.target as HTMLElement).parentElement?.children[idx - 1] as HTMLInputElement;
+                          prev?.focus();
+                        }
+                        if (e.key === "Enter" && idx === 3) handleSubmit();
+                      }}
+                      className="w-full aspect-square rounded-xl text-center text-xl font-mono font-bold outline-none transition-all"
+                      style={{
+                        background: BG_DARK,
+                        border: `2px solid ${confirmPin[idx] ? (pin[idx] === confirmPin[idx] ? `${GREEN}60` : `${RED}60`) : BORDER}`,
+                        color: confirmPin[idx] && pin[idx] === confirmPin[idx] ? GREEN : confirmPin[idx] ? RED : GOLD,
+                        maxWidth: 56,
+                      }}
+                    />
+                  ))}
+                </div>
+                {confirmPin.length === 4 && pin !== confirmPin && (
+                  <p className="text-[11px] mt-1.5" style={{ color: RED }}>PINs don{"'"}t match</p>
+                )}
+              </div>
+            )}
+
+            {/* Error message */}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg"
+                style={{ background: `${RED}12`, border: `1px solid ${RED}25` }}
+              >
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" style={{ color: RED }} />
+                <span className="text-[12px] font-medium" style={{ color: RED }}>{error}</span>
+              </motion.div>
+            )}
+
+            {/* Submit button */}
+            <button
+              onClick={handleSubmit}
+              disabled={!isValid || loading}
+              className="w-full py-3.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2"
+              style={{
+                background: isValid && !loading ? GOLD : BORDER,
+                color: isValid && !loading ? "#0d1117" : TEXT_MUTED,
+                opacity: isValid && !loading ? 1 : 0.5,
+              }}
+            >
+              {loading ? (
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                >
+                  <Zap className="w-4 h-4" />
+                </motion.div>
+              ) : mode === "new" ? (
+                <>
+                  <ShieldCheck className="w-4 h-4" />
+                  Create Account & Enter
+                </>
+              ) : (
+                <>
+                  <LogIn className="w-4 h-4" />
+                  Sign In
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Footer */}
+          <div className="text-center space-y-1">
+            <p className="text-[11px]" style={{ color: TEXT_MUTED }}>
+              <KeyRound className="w-3 h-3 inline mr-1" style={{ color: TEXT_MUTED }} />
+              Your PIN lets you access your account from any device.
+            </p>
+          </div>
+        </div>
       </motion.div>
     </motion.div>
   );
@@ -1491,6 +1717,156 @@ function UserStats({ user }: { user: UserProfile }) {
 }
 
 /* ================================================================== */
+/*  Bet History Panel                                                  */
+/* ================================================================== */
+
+function BetHistoryPanel({ playerId }: { playerId: string }) {
+  const [bets, setBets] = useState<BetHistoryRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    fetchBetHistory(playerId).then((data) => {
+      setBets(data);
+      setLoading(false);
+    });
+  }, [playerId]);
+
+  if (loading) {
+    return (
+      <div className="py-3 text-center">
+        <div className="animate-pulse text-[11px]" style={{ color: TEXT_MUTED }}>Loading bet history...</div>
+      </div>
+    );
+  }
+
+  const totalBets = bets.length;
+  const wins = bets.filter((b) => b.won).length;
+  const winRate = totalBets > 0 ? Math.round((wins / totalBets) * 100) : 0;
+  const totalWagered = bets.reduce((s, b) => s + b.total_cost, 0);
+  const totalPayout = bets.reduce((s, b) => s + b.payout, 0);
+  const netProfit = totalPayout - totalWagered;
+  const displayBets = expanded ? bets : bets.slice(0, 5);
+
+  return (
+    <div className="space-y-2.5">
+      {/* Header */}
+      <div className="flex items-center gap-2">
+        <History className="w-3.5 h-3.5" style={{ color: GOLD }} />
+        <span className="text-xs font-bold uppercase tracking-wider" style={{ color: TEXT_SEC }}>
+          Bet History
+        </span>
+        <span className="ml-auto text-[10px] font-mono" style={{ color: TEXT_MUTED }}>
+          {totalBets} bet{totalBets !== 1 ? "s" : ""}
+        </span>
+      </div>
+
+      {/* Stats row */}
+      {totalBets > 0 && (
+        <div className="grid grid-cols-3 gap-1.5">
+          <div className="px-2 py-1.5 rounded-lg text-center" style={{ background: BG_DARK, border: `1px solid ${BORDER}` }}>
+            <div className="text-[9px] font-semibold uppercase" style={{ color: TEXT_MUTED }}>Win Rate</div>
+            <div className="text-xs font-bold font-mono" style={{ color: winRate >= 50 ? GREEN : winRate >= 30 ? GOLD : RED }}>
+              {winRate}%
+            </div>
+          </div>
+          <div className="px-2 py-1.5 rounded-lg text-center" style={{ background: BG_DARK, border: `1px solid ${BORDER}` }}>
+            <div className="text-[9px] font-semibold uppercase" style={{ color: TEXT_MUTED }}>Wagered</div>
+            <div className="text-xs font-bold font-mono" style={{ color: "#e6edf3" }}>
+              ${totalWagered.toLocaleString()}
+            </div>
+          </div>
+          <div className="px-2 py-1.5 rounded-lg text-center" style={{ background: BG_DARK, border: `1px solid ${BORDER}` }}>
+            <div className="text-[9px] font-semibold uppercase" style={{ color: TEXT_MUTED }}>Net P&L</div>
+            <div className="text-xs font-bold font-mono" style={{ color: netProfit >= 0 ? GREEN : RED }}>
+              {netProfit >= 0 ? "+" : ""}{netProfit.toLocaleString()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bet list */}
+      {totalBets === 0 ? (
+        <div className="text-center py-5 rounded-xl" style={{ background: BG_DARK, border: `1px dashed ${BORDER}` }}>
+          <Ticket className="w-5 h-5 mx-auto mb-2" style={{ color: TEXT_MUTED }} />
+          <p className="text-[11px] font-medium" style={{ color: TEXT_MUTED }}>No bets yet</p>
+          <p className="text-[10px] mt-0.5" style={{ color: TEXT_MUTED }}>Place your first wager!</p>
+        </div>
+      ) : (
+        <div className="space-y-1 max-h-[300px] overflow-y-auto pr-0.5">
+          {displayBets.map((bet) => (
+            <div
+              key={bet.id}
+              className="flex items-center gap-2 px-2.5 py-2 rounded-lg"
+              style={{
+                background: bet.won ? `${GREEN}06` : BG_DARK,
+                border: `1px solid ${bet.won ? `${GREEN}20` : BORDER}`,
+              }}
+            >
+              {/* Win/loss indicator */}
+              <div
+                className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
+                style={{ background: bet.won ? `${GREEN}20` : `${RED}15` }}
+              >
+                {bet.won ? (
+                  <Check className="w-2.5 h-2.5" style={{ color: GREEN }} />
+                ) : (
+                  <X className="w-2.5 h-2.5" style={{ color: RED }} />
+                )}
+              </div>
+
+              {/* Bet type badge */}
+              <span
+                className="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0"
+                style={{
+                  background: bet.bet_type.includes("exacta") || bet.bet_type.includes("tri") || bet.bet_type.includes("super")
+                    ? `${PURPLE}15` : `${GOLD}12`,
+                  color: bet.bet_type.includes("exacta") || bet.bet_type.includes("tri") || bet.bet_type.includes("super")
+                    ? PURPLE : GOLD,
+                }}
+              >
+                {bet.bet_type.replace("_", " ")}
+              </span>
+
+              {/* Selections */}
+              <div className="flex-1 min-w-0">
+                <div className="text-[10px] font-medium truncate" style={{ color: "#e6edf3" }}>
+                  {bet.selections.join(" → ")}
+                </div>
+                <div className="text-[9px]" style={{ color: TEXT_MUTED }}>
+                  ${bet.total_cost} wager
+                </div>
+              </div>
+
+              {/* Payout */}
+              <div className="text-right shrink-0">
+                <div className="text-[11px] font-bold font-mono" style={{ color: bet.won ? GREEN : RED }}>
+                  {bet.won ? `+$${(bet.payout - bet.total_cost).toLocaleString()}` : `-$${bet.total_cost}`}
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {/* Show more / less */}
+          {bets.length > 5 && (
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="w-full py-1.5 rounded-lg text-[10px] font-semibold flex items-center justify-center gap-1"
+              style={{ color: GOLD, border: `1px solid ${BORDER}` }}
+            >
+              <ChevronDown
+                className={`w-3 h-3 transition-transform ${expanded ? "rotate-180" : ""}`}
+              />
+              {expanded ? "Show Less" : `Show All ${bets.length} Bets`}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ================================================================== */
 /*  Shared Leaderboard Component                                       */
 /* ================================================================== */
 
@@ -1728,20 +2104,19 @@ export default function LiveRacingPage() {
     }
   }, [syncPlayer]);
 
-  /* ---- Create user ---- */
-  const handleCreateUser = useCallback((name: string, school: string) => {
-    const newUser = createUser(name, school);
-    setUser(newUser);
-    saveUser(newUser);
+  /* ---- Auth complete (new or returning user) ---- */
+  const handleAuthComplete = useCallback((authenticatedUser: UserProfile) => {
+    setUser(authenticatedUser);
+    saveUser(authenticatedUser);
     setShowNameEntry(false);
     syncPlayer({
-      id: newUser.id,
-      name: newUser.name,
-      school: newUser.school,
-      bankroll: newUser.bankroll,
-      total_profit: newUser.totalProfit,
-      races_played: newUser.racesPlayed,
-      biggest_win: newUser.biggestWin,
+      id: authenticatedUser.id,
+      name: authenticatedUser.name,
+      school: authenticatedUser.school,
+      bankroll: authenticatedUser.bankroll,
+      total_profit: authenticatedUser.totalProfit,
+      races_played: authenticatedUser.racesPlayed,
+      biggest_win: authenticatedUser.biggestWin,
     });
   }, [syncPlayer]);
 
@@ -1964,7 +2339,7 @@ export default function LiveRacingPage() {
     <main className="min-h-screen pt-16 pb-12" style={{ background: BG_DARK }}>
       {/* Name entry modal */}
       <AnimatePresence>
-        {showNameEntry && <NameEntryModal onSubmit={handleCreateUser} />}
+        {showNameEntry && <AuthModal onSubmit={handleAuthComplete} />}
       </AnimatePresence>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
@@ -2324,23 +2699,32 @@ export default function LiveRacingPage() {
                     </motion.div>
                   )}
 
-                  {/* Change name / reset */}
+                  {/* Switch account / reset */}
                   <div className="mt-3 flex gap-2">
                     <button
                       onClick={() => setShowNameEntry(true)}
-                      className="flex-1 py-2 rounded-lg text-[10px] font-medium"
+                      className="flex-1 py-2 rounded-lg text-[10px] font-medium flex items-center justify-center gap-1"
                       style={{ color: TEXT_MUTED, border: `1px solid ${BORDER}` }}
                     >
-                      Change Name
+                      <LogIn className="w-3 h-3" />
+                      Switch Account
                     </button>
                     <button
                       onClick={resetBankroll}
-                      className="flex-1 py-2 rounded-lg text-[10px] font-medium"
+                      className="flex-1 py-2 rounded-lg text-[10px] font-medium flex items-center justify-center gap-1"
                       style={{ color: TEXT_MUTED, border: `1px solid ${BORDER}` }}
                     >
+                      <RotateCcw className="w-3 h-3" />
                       Reset Stats
                     </button>
                   </div>
+                </div>
+              )}
+
+              {/* Bet History */}
+              {user && (
+                <div className="p-4 rounded-2xl" style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}>
+                  <BetHistoryPanel playerId={user.id} />
                 </div>
               )}
 
