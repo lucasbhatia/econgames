@@ -33,7 +33,7 @@ import { ALL_PROFILES, getProfile } from "@/lib/data/horse-profiles";
 import { ALL_RACES } from "@/lib/data/race-data";
 import { runMonteCarlo, simToReplayData } from "@/lib/simulation/engine";
 import { profileToSim } from "@/lib/simulation/helpers";
-import { PIPELINE_ACTIVE, MODEL_DIAGNOSTICS, TRANSFER_DIAGNOSTICS } from "@/lib/data/pipeline-output";
+import { PIPELINE_ACTIVE, MODEL_DIAGNOSTICS, TRANSFER_DIAGNOSTICS, TRACK_PRESETS } from "@/lib/data/pipeline-output";
 import type {
   SimHorse,
   SimResults,
@@ -788,6 +788,27 @@ function SimulatePageInner() {
                     setDistance(track.distance);
                     setSurface(track.surface);
                     setTrackBias(track.bias);
+                    // Load real GPS horses for this track from pipeline data
+                    const preset = TRACK_PRESETS[track.id];
+                    if (preset && preset.length > 0) {
+                      const colors = ["#c9a84c", "#e74c3c", "#3498db", "#2ecc71", "#9b59b6", "#e67e22", "#1abc9c", "#34495e"];
+                      const presetHorses: SimHorse[] = preset.map((h, i) => ({
+                        name: h.name,
+                        color: colors[i % colors.length],
+                        imageUrl: "",
+                        speedCurve: h.speedCurve,
+                        topSpeed: h.topSpeed,
+                        avgSpeed: h.avgSpeed,
+                        strideEfficiency: h.strideEfficiency,
+                        runningStyle: h.style as "Front Runner" | "Stalker" | "Closer",
+                        consistency: 0.4,
+                        postPosition: i + 1,
+                        isCustom: false,
+                        bestDistance: `${track.distance}F`,
+                        bestSurface: track.surface,
+                      }));
+                      setSelectedHorses(presetHorses);
+                    }
                   }}
                   className="group relative rounded-lg border px-3 py-2 text-left transition-all hover:border-[#b8941f] hover:bg-[#b8941f08]"
                   style={{
