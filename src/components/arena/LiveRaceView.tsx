@@ -33,11 +33,11 @@ interface LiveRaceViewProps {
 /*  Theme                                                              */
 /* ------------------------------------------------------------------ */
 
-const GOLD = "#f5c842";
-const BG = "#0d1117";
-const BG_CARD = "#161b22";
-const BORDER = "#21262d";
-const TEXT_DIM = "#8b949e";
+const GOLD = "#b8941f";
+const BG = "#1a1a2a";
+const BG_CARD = "#22223a";
+const BORDER = "rgba(255,255,255,0.1)";
+const TEXT_DIM = "#9ca3af";
 
 /* ------------------------------------------------------------------ */
 /*  Track Geometry                                                     */

@@ -20,13 +20,13 @@ type Tab = (typeof TABS)[number];
 const MAX_SELECTED = 4;
 
 const COLOR = {
-  bg: "#0d1117",
-  card: "#161b22",
-  text: "#e6edf3",
-  secondary: "#8b949e",
-  muted: "#484f58",
-  gold: "#f5c842",
-  border: "#21262d",
+  bg: "#ffffff",
+  card: "#f8f6f2",
+  text: "#1a1a2a",
+  secondary: "#6b7280",
+  muted: "#9ca3af",
+  gold: "#b8941f",
+  border: "#e5e2db",
 } as const;
 
 const TAB_DESCRIPTIONS: Record<Tab, string> = {
@@ -175,7 +175,7 @@ export default function RaceXRayPage() {
         <header className="mb-4">
           <h1
             className="font-heading text-3xl font-bold tracking-tight"
-            style={{ color: "#fff" }}
+            style={{ color: COLOR.text }}
           >
             Race X-Ray
           </h1>
@@ -198,7 +198,7 @@ export default function RaceXRayPage() {
                 style={{
                   backgroundColor: raceIndex === idx ? `${COLOR.gold}10` : COLOR.card,
                   border: `1.5px solid ${raceIndex === idx ? COLOR.gold : COLOR.border}`,
-                  color: raceIndex === idx ? "#e6edf3" : COLOR.secondary,
+                  color: raceIndex === idx ? COLOR.text : COLOR.secondary,
                 }}
               >
                 <span className="font-semibold">{r.track.trim()} R{r.raceNum}</span>
@@ -245,7 +245,7 @@ export default function RaceXRayPage() {
             className="ml-auto flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-sm font-semibold transition-all hover:scale-[1.02]"
             style={{
               backgroundColor: COLOR.gold,
-              color: "#0d1117",
+              color: "#fff",
             }}
           >
             <Play size={14} fill="#fff" />
@@ -300,7 +300,7 @@ export default function RaceXRayPage() {
                   onClick={() => setActiveTab(tab)}
                   className="relative rounded-md px-4 py-2 text-sm font-medium transition-colors"
                   style={{
-                    color: activeTab === tab ? COLOR.gold : COLOR.muted,
+                    color: activeTab === tab ? COLOR.text : COLOR.muted,
                   }}
                 >
                   {activeTab === tab && (
@@ -308,8 +308,9 @@ export default function RaceXRayPage() {
                       layoutId="xray-tab"
                       className="absolute inset-0 rounded-md"
                       style={{
-                        backgroundColor: `${COLOR.gold}12`,
-                        border: `1px solid ${COLOR.gold}30`,
+                        backgroundColor: COLOR.bg,
+                        border: `1px solid ${COLOR.border}`,
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
                       }}
                       transition={{ type: "spring", stiffness: 400, damping: 30 }}
                     />
@@ -403,7 +404,7 @@ export default function RaceXRayPage() {
                       disabled={isDisabled}
                       className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-all"
                       style={{
-                        backgroundColor: isSelected ? `${COLOR.gold}10` : "transparent",
+                        backgroundColor: isSelected ? `${COLOR.gold}0a` : "transparent",
                         opacity: isDisabled ? 0.4 : 1,
                         cursor: isDisabled ? "not-allowed" : "pointer",
                       }}
@@ -510,9 +511,9 @@ export default function RaceXRayPage() {
                     onClick={() => setShowResults(true)}
                     className="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
                     style={{
-                      backgroundColor: `${COLOR.gold}12`,
+                      backgroundColor: `${COLOR.gold}15`,
                       color: COLOR.gold,
-                      border: `1px solid ${COLOR.gold}30`,
+                      border: `1px solid ${COLOR.gold}40`,
                     }}
                   >
                     Show Results
@@ -557,16 +558,16 @@ export default function RaceXRayPage() {
                         {getFinishingOrder(race).map((finisher, idx) => (
                           <div
                             key={finisher.name}
-                            className={`flex items-center gap-3 rounded-lg px-3 py-1.5 ${idx === 0 ? "animate-gold-shimmer" : ""}`}
+                            className="flex items-center gap-3 rounded-lg px-3 py-1.5"
                             style={{
-                              backgroundColor: idx === 0 ? `${COLOR.gold}10` : "transparent",
+                              backgroundColor: idx === 0 ? `${COLOR.gold}0a` : "transparent",
                             }}
                           >
                             <span
                               className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold"
                               style={{
-                                backgroundColor: idx === 0 ? COLOR.gold : idx < 3 ? `${COLOR.muted}25` : `${COLOR.muted}15`,
-                                color: idx === 0 ? "#0d1117" : idx < 3 ? "#e6edf3" : COLOR.muted,
+                                backgroundColor: idx === 0 ? COLOR.gold : `${COLOR.muted}20`,
+                                color: idx === 0 ? "#fff" : COLOR.muted,
                               }}
                             >
                               {idx + 1}

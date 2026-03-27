@@ -52,34 +52,43 @@ function isConfigured(): boolean {
   );
 }
 
-/** Compute school standings from player data */
+/** Compute school standings from player data.
+ *  Schools are ranked by total profit from profitable players (bankroll > 1000).
+ *  Only players who are up count toward school score. */
 function computeSchoolStandings(players: LeaderboardEntry[]): SchoolStanding[] {
-  const schoolMap = new Map<string, { players: LeaderboardEntry[] }>();
+  const schoolMap = new Map<string, { allPlayers: LeaderboardEntry[]; profitablePlayers: LeaderboardEntry[] }>();
 
   for (const p of players) {
     if (!p.school) continue;
     const existing = schoolMap.get(p.school);
+    const isProfitable = p.bankroll > 1000;
     if (existing) {
-      existing.players.push(p);
+      existing.allPlayers.push(p);
+      if (isProfitable) existing.profitablePlayers.push(p);
     } else {
-      schoolMap.set(p.school, { players: [p] });
+      schoolMap.set(p.school, {
+        allPlayers: [p],
+        profitablePlayers: isProfitable ? [p] : [],
+      });
     }
   }
 
   const standings: SchoolStanding[] = [];
   for (const [school, data] of schoolMap) {
-    const totalProfit = data.players.reduce((s, p) => s + p.total_profit, 0);
-    const avgBankroll = data.players.reduce((s, p) => s + p.bankroll, 0) / data.players.length;
-    const topPlayer = data.players.sort((a, b) => b.bankroll - a.bankroll)[0];
+    // School score = sum of profit from profitable players only
+    const totalProfit = data.profitablePlayers.reduce((s, p) => s + p.total_profit, 0);
+    const avgBankroll = data.allPlayers.reduce((s, p) => s + p.bankroll, 0) / data.allPlayers.length;
+    const topPlayer = data.allPlayers.sort((a, b) => b.total_profit - a.total_profit)[0];
     standings.push({
       school,
-      players: data.players.length,
+      players: data.allPlayers.length,
       totalProfit: Math.round(totalProfit),
       avgBankroll: Math.round(avgBankroll),
       topPlayer: topPlayer?.name ?? "",
     });
   }
 
+  // Sort by total profit descending
   return standings.sort((a, b) => b.totalProfit - a.totalProfit);
 }
 
@@ -183,6 +192,45 @@ export function useLeaderboard() {
     }
   }, []);
 
+  // Fetch recent winning bets across all players
+  const [recentWins, setRecentWins] = useState<{ name: string; bet_type: string; payout: number; selections: string[] }[]>([]);
+
+  const fetchRecentWins = useCallback(async () => {
+    if (!isConfigured()) return;
+    try {
+      const { data } = await supabase
+        .from("bets")
+        .select("player_id, bet_type, payout, selections, total_cost")
+        .eq("won", true)
+        .gt("payout", 0)
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (data && data.length > 0) {
+        // Resolve player names
+        const playerIds = [...new Set(data.map((b: Record<string, unknown>) => b.player_id as string))];
+        const { data: players } = await supabase
+          .from("players")
+          .select("id, name")
+          .in("id", playerIds);
+
+        const nameMap = new Map((players ?? []).map((p: Record<string, unknown>) => [p.id as string, p.name as string]));
+        setRecentWins(
+          data.map((b: Record<string, unknown>) => ({
+            name: nameMap.get(b.player_id as string) ?? "Unknown",
+            bet_type: b.bet_type as string,
+            payout: (b.payout as number) - (b.total_cost as number),
+            selections: b.selections as string[],
+          }))
+        );
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    fetchRecentWins();
+  }, [fetchRecentWins]);
+
   return {
     leaderboard,
     schoolStandings,
@@ -191,5 +239,6 @@ export function useLeaderboard() {
     syncPlayer,
     logBets,
     refetch: fetchLeaderboard,
+    recentWins,
   };
 }

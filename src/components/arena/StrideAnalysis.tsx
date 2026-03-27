@@ -56,28 +56,28 @@ function CustomTooltip({
     <div
       style={{
         backgroundColor: "#ffffff",
-        border: "1px solid #21262d",
+        border: "1px solid #e5e2db",
         borderRadius: "8px",
         padding: "8px 12px",
         boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
       }}
     >
-      <p style={{ margin: "0 0 4px 0", fontSize: "14px", fontWeight: 600, color: "#e6edf3" }}>
+      <p style={{ margin: "0 0 4px 0", fontSize: "14px", fontWeight: 600, color: "#1a1a2a" }}>
         {d.horse}
       </p>
-      <div style={{ display: "flex", flexDirection: "column", gap: "2px", fontSize: "13px", color: "#8b949e" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "2px", fontSize: "13px", color: "#6b7280" }}>
         <p style={{ margin: 0 }}>
-          Gate: <span style={{ color: "#e6edf3" }}>{d.gate}</span>
+          Gate: <span style={{ color: "#1a1a2a" }}>{d.gate}</span>
         </p>
         <p style={{ margin: 0 }}>
-          Stride: <span style={{ color: "#e6edf3" }}>{d.x.toFixed(2)} ft</span>
+          Stride: <span style={{ color: "#1a1a2a" }}>{d.x.toFixed(2)} ft</span>
         </p>
         <p style={{ margin: 0 }}>
-          Speed: <span style={{ color: "#e6edf3" }}>{d.y.toFixed(2)} ft/s</span>
+          Speed: <span style={{ color: "#1a1a2a" }}>{d.y.toFixed(2)} ft/s</span>
         </p>
         <p style={{ margin: 0 }}>
           Efficiency:{" "}
-          <span style={{ fontWeight: 600, color: "#f5c842" }}>
+          <span style={{ fontWeight: 600, color: "#b8941f" }}>
             {d.efficiency.toFixed(3)}
           </span>
         </p>
@@ -138,7 +138,7 @@ export default function StrideAnalysis({ horses, colors }: StrideAnalysisProps) 
     <div
       style={{
         backgroundColor: "#ffffff",
-        border: "1px solid #21262d",
+        border: "1px solid #e5e2db",
         borderRadius: "12px",
         padding: "20px",
       }}
@@ -147,7 +147,7 @@ export default function StrideAnalysis({ horses, colors }: StrideAnalysisProps) 
       {/* Scatter Chart */}
       <div>
         <h3
-          style={{ color: "#e6edf3", fontSize: "13px" }}
+          style={{ color: "#1a1a2a", fontSize: "13px" }}
           className="mb-1 font-semibold uppercase tracking-wider"
         >
           Stride Efficiency Map
@@ -160,7 +160,7 @@ export default function StrideAnalysis({ horses, colors }: StrideAnalysisProps) 
             <ScatterChart margin={{ top: 10, right: 20, bottom: 20, left: 10 }}>
               <CartesianGrid
                 strokeDasharray="3 3"
-                stroke="#21262d"
+                stroke="#e5e2db"
               />
               <XAxis
                 type="number"
@@ -168,14 +168,14 @@ export default function StrideAnalysis({ horses, colors }: StrideAnalysisProps) 
                 name="Stride Length"
                 unit=" ft"
                 domain={domain.x}
-                tick={{ fill: "#8b949e", fontSize: 12 }}
-                axisLine={{ stroke: "#21262d" }}
-                tickLine={{ stroke: "#21262d" }}
+                tick={{ fill: "#6b7280", fontSize: 12 }}
+                axisLine={{ stroke: "#e5e2db" }}
+                tickLine={{ stroke: "#e5e2db" }}
                 label={{
                   value: "Stride Length (ft)",
                   position: "insideBottom",
                   offset: -10,
-                  fill: "#8b949e",
+                  fill: "#6b7280",
                   fontSize: 12,
                 }}
               />
@@ -185,22 +185,22 @@ export default function StrideAnalysis({ horses, colors }: StrideAnalysisProps) 
                 name="Speed"
                 unit=" ft/s"
                 domain={domain.y}
-                tick={{ fill: "#8b949e", fontSize: 12 }}
-                axisLine={{ stroke: "#21262d" }}
-                tickLine={{ stroke: "#21262d" }}
+                tick={{ fill: "#6b7280", fontSize: 12 }}
+                axisLine={{ stroke: "#e5e2db" }}
+                tickLine={{ stroke: "#e5e2db" }}
                 label={{
                   value: "Speed (ft/s)",
                   angle: -90,
                   position: "insideLeft",
                   offset: 5,
-                  fill: "#8b949e",
+                  fill: "#6b7280",
                   fontSize: 12,
                 }}
               />
               <ZAxis range={[48, 48]} />
               <Tooltip
                 content={<CustomTooltip />}
-                cursor={{ strokeDasharray: "3 3", stroke: "#21262d" }}
+                cursor={{ strokeDasharray: "3 3", stroke: "#e5e2db" }}
               />
 
               {/* Trendline — simple diagonal scatter with 2 points */}
@@ -235,7 +235,7 @@ export default function StrideAnalysis({ horses, colors }: StrideAnalysisProps) 
       {/* Efficiency Ranking */}
       <div>
         <h3
-          style={{ color: "#e6edf3", fontSize: "13px" }}
+          style={{ color: "#1a1a2a", fontSize: "13px" }}
           className="mb-2 font-semibold uppercase tracking-wider"
         >
           Efficiency Ranking
@@ -249,7 +249,7 @@ export default function StrideAnalysis({ horses, colors }: StrideAnalysisProps) 
                 key={entry.name}
                 className="flex items-center gap-3 rounded-lg px-3 py-2 transition-colors"
                 style={{
-                  backgroundColor: isTop ? "rgba(184,148,31,0.06)" : "#161b22",
+                  backgroundColor: isTop ? "rgba(184,148,31,0.06)" : "#f8f6f2",
                   border: isTop ? "1px solid rgba(184,148,31,0.4)" : "1px solid transparent",
                 }}
               >
@@ -265,7 +265,7 @@ export default function StrideAnalysis({ horses, colors }: StrideAnalysisProps) 
                 />
                 <span
                   className="w-28 shrink-0 truncate"
-                  style={{ fontSize: "14px", color: "#e6edf3" }}
+                  style={{ fontSize: "14px", color: "#1a1a2a" }}
                 >
                   {entry.name}
                 </span>
@@ -287,7 +287,7 @@ export default function StrideAnalysis({ horses, colors }: StrideAnalysisProps) 
                   style={{
                     fontSize: "13px",
                     fontWeight: isTop ? 600 : 400,
-                    color: isTop ? "#f5c842" : "#8b949e",
+                    color: isTop ? "#b8941f" : "#6b7280",
                   }}
                 >
                   {entry.efficiency.toFixed(3)}

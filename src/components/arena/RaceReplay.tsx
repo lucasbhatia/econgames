@@ -29,11 +29,11 @@ interface RaceReplayProps {
 /*  Constants                                                          */
 /* ------------------------------------------------------------------ */
 
-const GOLD = "#f5c842";
-const BG_DARK = "#0d1117";
-const BG_LANE = "#161b22";
-const TEXT_MUTED = "#484f58";
-const BORDER_DARK = "#21262d";
+const GOLD = "#b8941f";
+const BG_DARK = "#1a1a2a";
+const BG_LANE = "#1e1e30";
+const TEXT_MUTED = "#9ca3af";
+const BORDER_DARK = "rgba(255,255,255,0.08)";
 
 const BASE_DURATION = 10; // seconds at 1x
 const LANE_HEIGHT = 44;

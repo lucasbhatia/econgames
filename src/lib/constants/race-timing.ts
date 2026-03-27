@@ -1,9 +1,9 @@
 // Race cycle timing constants — shared across navbar, live page, and context
 export const CYCLE_DURATION = 360;       // 6 minutes total
-export const BETTING_DURATION = 270;     // 4:30 to bet
-export const POST_PARADE_DURATION = 20;  // 20s gate load
+export const BETTING_DURATION = 280;     // 4:40 to bet
+export const POST_PARADE_DURATION = 15;  // 15s gate load
 export const RACING_DURATION = 30;       // 30s race
-export const RESULTS_DURATION = CYCLE_DURATION - BETTING_DURATION - POST_PARADE_DURATION - RACING_DURATION; // 40s
+export const RESULTS_DURATION = CYCLE_DURATION - BETTING_DURATION - POST_PARADE_DURATION - RACING_DURATION; // 35s
 
 export type RacePhase = "betting" | "post_parade" | "racing" | "results";
 
