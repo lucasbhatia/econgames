@@ -2514,7 +2514,11 @@ export default function LiveRacingPage() {
                               : user.bankroll
                           } />
                         </div>
-                        {bets.length > 0 && phase !== "results" ? (
+                        {phase === "results" && betResults.length > 0 ? (
+                          <div className="text-[9px] font-mono font-bold" style={{ color: (totalWinnings - totalWagered) >= 0 ? GREEN : RED }}>
+                            {(totalWinnings - totalWagered) >= 0 ? "+" : ""}{totalWinnings - totalWagered} this race
+                          </div>
+                        ) : bets.length > 0 && phase !== "results" ? (
                           <div className="text-[9px] font-mono" style={{ color: ORANGE }}>
                             ${bets.reduce((s, b) => s + b.totalCost, 0)} wagered
                           </div>
