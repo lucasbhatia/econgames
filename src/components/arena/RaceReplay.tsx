@@ -45,12 +45,10 @@ const LABEL_WIDTH = 120;
 /* ------------------------------------------------------------------ */
 
 const GALLOP_CSS = `
-@keyframes gallop {
-  0%   { transform: translate(-100%, -50%) scaleY(1); }
-  25%  { transform: translate(-100%, calc(-50% - 1px)) scaleY(1.06); }
-  50%  { transform: translate(-100%, -50%) scaleY(1); }
-  75%  { transform: translate(-100%, calc(-50% + 1px)) scaleY(0.94); }
-  100% { transform: translate(-100%, -50%) scaleY(1); }
+@keyframes gallop-bounce {
+  0%, 100% { transform: scaleY(1) translateY(0); }
+  25%  { transform: scaleY(1.06) translateY(-1px); }
+  75%  { transform: scaleY(0.94) translateY(1px); }
 }
 `;
 
@@ -333,19 +331,23 @@ export default function RaceReplay({ horses, colors, distance }: RaceReplayProps
                   }}
                 />
 
-                {/* Horse — left% for position, keyframe for gallop bounce */}
+                {/* Horse: outer div = position (left%), inner div = gallop bounce */}
                 <div
                   className="absolute top-1/2"
                   style={{
                     left: `${xPct}%`,
                     transform: "translate(-100%, -50%)",
-                    willChange: "left, transform",
                     transition: "left 0.08s linear",
-                    animation: isGalloping ? "gallop 0.5s ease-in-out infinite" : "none",
-                    transformOrigin: "center bottom",
                   }}
                 >
-                  <HorseSilhouette color={h.color} size={30} />
+                  <div
+                    style={{
+                      animation: isGalloping ? "gallop-bounce 0.5s ease-in-out infinite" : "none",
+                      transformOrigin: "center bottom",
+                    }}
+                  >
+                    <HorseSilhouette color={h.color} size={30} />
+                  </div>
                 </div>
               </div>
 
