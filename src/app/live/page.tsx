@@ -243,6 +243,13 @@ function createUser(name: string, school: string): UserProfile {
 /*  Payout Calculation                                                 */
 /* ================================================================== */
 
+// ODDS AUDIT FIX [P3]: Document exotic payout multipliers.
+// These reduction factors approximate real track exotic pool takeouts:
+// - Exacta: 0.6x (real tracks take ~20-25% of exacta pool; 0.6 accounts for pool inefficiency)
+// - Trifecta: 0.4x (higher complexity = larger takeout; real tracks take ~25-30%)
+// - Trifecta Key: 0.45x (slightly better than box due to key constraint)
+// - Superfecta: 0.3x (most complex exotic; real tracks take ~30%+)
+// All exotics capped at 500x the wager to prevent unrealistic payouts.
 function calculateBetPayout(bet: Bet, finishOrder: string[], odds: RaceCard["odds"]): { won: boolean; payout: number } {
   const first = finishOrder[0];
   const second = finishOrder[1];

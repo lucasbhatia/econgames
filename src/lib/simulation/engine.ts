@@ -169,20 +169,30 @@ function simulateOneRace(horses: SimHorse[], distF: number, surface: string, tra
   return { finishOrder, times, gateSpeeds };
 }
 
+// ODDS AUDIT FIX [P1]: Unified fractional odds formatting.
+// Uses the same track-standard fraction table as formatOddsDisplay() in constants.ts.
+// Converts win percentage to fair (no-vig) fractional odds for the simulate page.
 function formatOdds(winPct: number): string {
   if (winPct <= 0) return "99-1";
   if (winPct >= 100) return "1-20";
-  const odds = (100 / winPct) - 1;
-  if (odds < 1) {
-    // Favorite: show as "X-Y ON" (e.g., "1-2" means bet $2 to win $1)
-    if (odds <= 0.2) return "1-5";
-    if (odds <= 0.4) return "2-5";
-    if (odds <= 0.6) return "3-5";
-    if (odds <= 0.8) return "4-5";
-    return "Even";
+  const profit = (100 / winPct) - 1; // profit per $1 wagered
+  if (profit >= 30) return "30-1";
+  if (profit >= 10) return `${Math.round(profit)}-1`;
+  if (profit >= 5) return `${Math.round(profit)}-1`;
+  // Standard track fractions — snap to nearest
+  const FRACTIONS: [number, string][] = [
+    [5.0, "5-1"], [4.5, "9-2"], [4.0, "4-1"], [3.5, "7-2"],
+    [3.0, "3-1"], [2.5, "5-2"], [2.0, "2-1"], [1.5, "3-2"],
+    [1.2, "6-5"], [1.0, "Even"], [0.8, "4-5"], [0.6, "3-5"],
+    [0.5, "1-2"], [0.4, "2-5"], [0.2, "1-5"],
+  ];
+  let best = FRACTIONS[0];
+  let bestDist = Math.abs(profit - best[0]);
+  for (const entry of FRACTIONS) {
+    const dist = Math.abs(profit - entry[0]);
+    if (dist < bestDist) { bestDist = dist; best = entry; }
   }
-  if (odds < 2) return `${odds.toFixed(1)}-1`;
-  return `${Math.round(odds)}-1`;
+  return best[1];
 }
 
 export function runMonteCarlo(config: SimConfig): SimResults {

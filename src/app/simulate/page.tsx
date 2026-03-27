@@ -1066,8 +1066,9 @@ function SimulatePageInner() {
                                   fontSize: 13,
                                 }}
                               >
+                                {/* ODDS AUDIT FIX [P1]: Cap $2 payout at $1000 to prevent misleading huge numbers for longshots */}
                                 {h.winPct > 0
-                                  ? `$${(2 * (100 / h.winPct)).toFixed(2)}`
+                                  ? `$${Math.min(1000, 2 * (100 / h.winPct)).toFixed(2)}`
                                   : "\u2014"}
                               </td>
                               {/* Traditional Factors indicators */}
