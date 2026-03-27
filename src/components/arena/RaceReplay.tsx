@@ -331,22 +331,32 @@ export default function RaceReplay({ horses, colors, distance }: RaceReplayProps
                   }}
                 />
 
-                {/* Horse: outer div = position (left%), inner div = gallop bounce */}
+                {/* Horse: outer positions, inner bounces */}
                 <div
                   className="absolute top-1/2"
                   style={{
                     left: `${xPct}%`,
-                    transform: "translate(-100%, -50%)",
-                    transition: "left 0.08s linear",
+                    transform: "translate(-50%, -50%)",
+                    transition: "left 0.15s ease-out",
                   }}
                 >
                   <div
                     style={{
-                      animation: isGalloping ? "gallop-bounce 0.5s ease-in-out infinite" : "none",
+                      animation: isGalloping ? "gallop-bounce 0.45s ease-in-out infinite" : "none",
                       transformOrigin: "center bottom",
                     }}
                   >
-                    <HorseSilhouette color={h.color} size={30} />
+                    {/* Colored dot with border — matches LiveRaceView style */}
+                    <div
+                      className="rounded-full"
+                      style={{
+                        width: isLeader ? 14 : 11,
+                        height: isLeader ? 14 : 11,
+                        background: h.color,
+                        border: `2px solid ${isLeader && (isGalloping || isFinished) ? GOLD : "#fff"}`,
+                        boxShadow: isLeader && (isGalloping || isFinished) ? `0 0 8px ${GOLD}60` : `0 0 4px ${h.color}40`,
+                      }}
+                    />
                   </div>
                 </div>
               </div>
