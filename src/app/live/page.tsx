@@ -680,15 +680,15 @@ function AuthModal({ onSubmit }: { onSubmit: (user: UserProfile) => void }) {
   useEffect(() => { setError(""); }, [mode, name, school, pin, confirmPin]);
 
   // Name validation — letters, numbers, spaces only, max 15 chars
-  const cleanName = name.replace(/[^a-zA-Z0-9 ]/g, "").slice(0, 15);
-  const BLOCKED_WORDS = ["fuck", "shit", "ass", "dick", "bitch", "nigger", "faggot", "cunt", "whore", "slut", "penis", "vagina", "nazi", "kill"];
+  const cleanName = name.replace(/[^a-zA-Z]/g, "").slice(0, 3).toUpperCase();
+  const BLOCKED_WORDS = ["fuc", "sht", "ass", "dic", "bit", "nig", "fag", "cnt", "hor", "slt", "naz", "kil", "sex", "wtf"];
   const nameHasBadWord = BLOCKED_WORDS.some(w => cleanName.toLowerCase().includes(w));
-  const nameValid = cleanName.trim().length >= 2 && cleanName.trim().length <= 15 && !nameHasBadWord;
+  const nameValid = cleanName.trim().length >= 2 && cleanName.trim().length <= 3 && !nameHasBadWord;
 
   const pinValid = pin.length === 4 && /^\d{4}$/.test(pin);
   const isLocked = Date.now() < lockedUntil;
   const isNewValid = nameValid && school !== "" && pinValid && pin === confirmPin;
-  const isReturnValid = cleanName.trim().length >= 2 && school !== "" && pinValid && !isLocked;
+  const isReturnValid = cleanName.trim().length >= 2 && cleanName.trim().length <= 3 && school !== "" && pinValid && !isLocked;
   const isValid = mode === "new" ? isNewValid : isReturnValid;
 
   const handlePinInput = (value: string, setter: (v: string) => void) => {
@@ -819,16 +819,16 @@ function AuthModal({ onSubmit }: { onSubmit: (user: UserProfile) => void }) {
           <div className="space-y-3">
             <div>
               <label className="text-[11px] font-semibold uppercase tracking-wider block mb-1.5" style={{ color: TEXT_SEC }}>
-                Display Name <span className="font-normal normal-case" style={{ color: TEXT_MUTED }}>(letters & numbers only)</span>
+                Initials <span className="font-normal normal-case" style={{ color: TEXT_MUTED }}>(2-3 letters)</span>
               </label>
               <input
                 ref={inputRef}
                 type="text"
                 value={name}
-                onChange={(e) => setName(e.target.value.replace(/[^a-zA-Z0-9 ]/g, "").slice(0, 15))}
+                onChange={(e) => setName(e.target.value.replace(/[^a-zA-Z]/g, "").slice(0, 3).toUpperCase())}
                 onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-                placeholder="Your name..."
-                maxLength={15}
+                placeholder="ABC"
+                maxLength={3}
                 className="w-full px-4 py-3 rounded-xl text-sm font-medium outline-none transition-all"
                 style={{
                   background: BG_DARK,
