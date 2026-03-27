@@ -100,7 +100,9 @@ export default function LiveRaceView({
       const interp = lerpGate(h.gates, progress, distance);
       const finished = progress >= 1;
       const currentPosition = finished ? h.finish : interp.position;
-      const positionOffset = (currentPosition - 1) * 0.035;
+      // Scale spread by field size — max ~15% gap between 1st and last
+      const maxSpread = 0.15 * progress;
+      const positionOffset = ((currentPosition - 1) / Math.max(1, n - 1)) * maxSpread;
       const horseX = Math.max(0, Math.min(1, progress - positionOffset));
 
       return {

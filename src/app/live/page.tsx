@@ -2268,11 +2268,24 @@ export default function LiveRacingPage() {
                   <div className="space-y-1.5 mb-4">
                     {replayData && (() => {
                       const prog = Math.min(1, (RACING_DURATION - timer) / RACING_DURATION);
-                      const horsesWithPos = race.horses.map((h, i) => {
-                        const posOffset = (i + 1) * 0.03;
-                        const horseX = Math.max(0, Math.min(1, prog - posOffset));
-                        return { name: h.name, color: h.color, x: horseX, idx: i };
-                      }).sort((a, b) => b.x - a.x);
+                      const nHorses = race.horses.length;
+                      // Use replay data positions for accurate ordering
+                      const horsesWithPos = replayData.horses.map((h: { name: string; finish: number; gates: { g: number; p: number; spd: number }[] }, i: number) => {
+                        // Interpolate current position from gate data
+                        const cur = prog * race.distance;
+                        let pos = h.finish;
+                        for (let gi = 0; gi < h.gates.length - 1; gi++) {
+                          if (h.gates[gi].g <= cur && h.gates[gi + 1].g >= cur) {
+                            const t = (cur - h.gates[gi].g) / (h.gates[gi + 1].g - h.gates[gi].g || 1);
+                            pos = Math.round(h.gates[gi].p + (h.gates[gi + 1].p - h.gates[gi].p) * t);
+                            break;
+                          }
+                        }
+                        const maxSpread = 0.15 * prog;
+                        const offset = ((pos - 1) / Math.max(1, nHorses - 1)) * maxSpread;
+                        const horseX = Math.max(0, Math.min(1, prog - offset));
+                        return { name: h.name, color: replayData.colors[i] || race.horses[i]?.color || "#888", x: horseX, idx: i };
+                      }).sort((a: { x: number }, b: { x: number }) => b.x - a.x);
 
                       return horsesWithPos.map((h, rank) => (
                         <div key={h.name} className="flex items-center gap-2">

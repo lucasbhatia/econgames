@@ -155,11 +155,15 @@ export default function RaceReplay({ horses, colors, distance }: RaceReplayProps
   const isFinished = progress >= 1;
 
   const horseStates = useMemo(() => {
+    const n = horses.length;
     return horses.map((h, i) => {
       const interp = lerpGate(h.gates, progress, distance);
       const finished = progress >= 1;
       const currentPosition = finished ? h.finish : interp.position;
-      const positionOffset = (currentPosition - 1) * 0.04;
+      // Scale offset by field size so all horses visibly move
+      // Max spread: ~15% of progress between 1st and last
+      const maxSpread = 0.15 * progress;
+      const positionOffset = ((currentPosition - 1) / Math.max(1, n - 1)) * maxSpread;
       const horseX = Math.max(0, Math.min(1, progress - positionOffset));
       return {
         ...h,
