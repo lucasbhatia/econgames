@@ -269,6 +269,7 @@ function SimulatePageInner() {
 
   /* ---- state ---- */
   const [selectedHorses, setSelectedHorses] = useState<SimHorse[]>([]);
+  const [selectedTrack, setSelectedTrack] = useState<string | null>(null);
   const [distance, setDistance] = useState(8);
   const [surface, setSurface] = useState<Surface>("Dirt");
   const [trackBias, setTrackBias] = useState<TrackBias>("none");
@@ -785,6 +786,7 @@ function SimulatePageInner() {
                 <button
                   key={track.id}
                   onClick={() => {
+                    setSelectedTrack(track.id);
                     setDistance(track.distance);
                     setSurface(track.surface);
                     setTrackBias(track.bias);
@@ -808,12 +810,17 @@ function SimulatePageInner() {
                         bestSurface: track.surface,
                       }));
                       setSelectedHorses(presetHorses);
+                    } else {
+                      // Fallback for tracks with no pipeline preset (e.g., CNL):
+                      // Load featured race horses from ALL_PROFILES
+                      const featured = ALL_PROFILES.slice(0, 8);
+                      setSelectedHorses(featured.map((p, i) => profileToSim(p, i + 1)));
                     }
                   }}
                   className="group relative rounded-lg border px-3 py-2 text-left transition-all hover:border-[#b8941f] hover:bg-[#b8941f08]"
                   style={{
-                    borderColor: distance === track.distance && surface === track.surface && trackBias === track.bias ? GOLD : BORDER,
-                    background: distance === track.distance && surface === track.surface && trackBias === track.bias ? `${GOLD}10` : BG_WHITE,
+                    borderColor: selectedTrack === track.id ? GOLD : BORDER,
+                    background: selectedTrack === track.id ? `${GOLD}10` : BG_WHITE,
                     minWidth: 140,
                   }}
                   title={track.description}
