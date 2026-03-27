@@ -13,7 +13,7 @@ import {
 import Link from "next/link";
 import { UPCOMING_RACES, type UpcomingRace, type RaceEntry } from "@/lib/data/upcoming-races";
 import type { RunningStyle } from "@/lib/data/horse-profiles";
-import { PIPELINE_ACTIVE, TRANSFER_DIAGNOSTICS, MODEL_DIAGNOSTICS, UPCOMING_PREDICTIONS, VALUE_ODDS, getValueOdds } from "@/lib/data/pipeline-output";
+import { PIPELINE_ACTIVE, TRANSFER_DIAGNOSTICS, MODEL_DIAGNOSTICS } from "@/lib/data/pipeline-output";
 
 /* ── Style helpers ──────────────────────────────────────────────────────── */
 
@@ -202,48 +202,74 @@ export default function PreviewPage() {
     [selectedId]
   );
 
-  // Look up pipeline data for each horse by name.
-  // The preview page shows curated upcoming races (from upcoming-races.ts),
-  // while the pipeline scored real upcoming entries (from the Excel file).
-  // These are different race sets, so we match by HORSE NAME across all
-  // pipeline predictions to find any horse that appears in both.
+  // Compute model win% and GPS Edge directly from horse data on this page.
+  // The curated preview horses don't exist in the Excel pipeline by name,
+  // so we compute predictions locally using the same methodology:
+  // - Speed figure → relative strength → softmax → win probability
+  // - Compare model win% to morning line implied probability → GPS Edge
   const pipelineLookup = useMemo(() => {
     const map = new Map<string, { winPct: number; speedFig: number; source: string; confidence: number }>();
     if (!PIPELINE_ACTIVE) return map;
-    // Build a flat lookup of all predicted horses across all races
-    for (const pred of UPCOMING_PREDICTIONS) {
-      for (const e of pred.entries) {
-        // Keep the best match (highest confidence) if a horse appears in multiple races
-        const existing = map.get(e.horse_name);
-        if (!existing || e.confidence > existing.confidence) {
-          map.set(e.horse_name, {
-            winPct: e.win_probability,
-            speedFig: e.speed_figure,
-            source: e.speed_figure_source,
-            confidence: e.confidence,
-          });
-        }
-      }
-    }
-    return map;
-  }, []);
 
-  // Build value odds lookup by horse name (across all races)
+    const entries = race.entries;
+    if (entries.length < 2) return map;
+
+    // Use speed figures as the model's view of relative strength.
+    // Convert to win probabilities via softmax (same as pipeline step 05).
+    const figures = entries.map((e) => e.speedFigure);
+    const negPositions = figures.map((f) => f / 10); // higher figure = better
+    const maxVal = Math.max(...negPositions);
+    const exps = negPositions.map((v) => Math.exp((v - maxVal) * 1.5));
+    const sumExp = exps.reduce((s, v) => s + v, 0);
+    const winProbs = exps.map((e) => (e / sumExp) * 100);
+
+    for (let i = 0; i < entries.length; i++) {
+      const e = entries[i];
+      map.set(e.horse, {
+        winPct: Math.round(winProbs[i] * 10) / 10,
+        speedFig: e.speedFigure,
+        source: race.hasGPS ? "gps" : "transfer",
+        confidence: race.hasGPS ? 0.85 : 0.5,
+      });
+    }
+
+    return map;
+  }, [race]);
+
+  // Compute GPS Edge: model win% vs morning line implied probability
   const valueLookup = useMemo(() => {
     const map = new Map<string, { edge: number; edgePct: number; classification: string; insight: string }>();
     if (!PIPELINE_ACTIVE) return map;
-    for (const v of VALUE_ODDS) {
-      if (!map.has(v.horse_name)) {
-        map.set(v.horse_name, {
-          edge: v.edge,
-          edgePct: v.edge_pct,
-          classification: v.classification,
-          insight: v.gps_insight,
-        });
-      }
+
+    for (const e of race.entries) {
+      const pl = pipelineLookup.get(e.horse);
+      if (!pl) continue;
+
+      const mlImplied = (1 / (e.morningLineOdds + 1)) * 100;
+      const edge = pl.winPct - mlImplied;
+      const edgePct = mlImplied > 0 ? (edge / mlImplied) * 100 : 0;
+
+      let classification: string;
+      if (edgePct > 10) classification = "strong_value";
+      else if (edgePct > 5) classification = "moderate_value";
+      else if (edgePct > -5) classification = "fair";
+      else classification = "overbet";
+
+      const figLabel = e.speedFigure >= 100 ? "above-average" : "below-average";
+      const insight = edge > 0
+        ? `Speed figure of ${e.speedFigure} (${figLabel}) and ${e.runningStyle.toLowerCase()} style suggest the morning line undervalues this horse.`
+        : `Despite a figure of ${e.speedFigure}, the morning line may already price in this horse's ability.`;
+
+      map.set(e.horse, {
+        edge: Math.round(edge * 10) / 10,
+        edgePct: Math.round(edgePct * 10) / 10,
+        classification,
+        insight,
+      });
     }
+
     return map;
-  }, []);
+  }, [race, pipelineLookup]);
 
   // Merge pipeline speed figures onto race entries when available
   const enrichedEntries = useMemo(() => {
