@@ -135,28 +135,32 @@ interface Bet {
   combinations: number;
 }
 
-const SCHOOLS = [
-  "University of Kentucky",
-  "NYU",
-  "MIT",
-  "Stanford",
-  "Harvard",
-  "Wharton",
-  "University of Chicago",
-  "Columbia",
-  "Duke",
-  "Yale",
-  "Princeton",
-  "Georgetown",
-  "UCLA",
-  "UC Berkeley",
-  "Michigan",
-  "Virginia",
-  "Cornell",
-  "Northwestern",
-  "Notre Dame",
-  "Other",
-];
+// School access codes — must enter correct code to join a school
+// This prevents people from creating fake accounts under other schools
+const SCHOOL_CODES: Record<string, string> = {
+  "University of Kentucky": "UK2026",
+  "NYU": "NYU2026",
+  "MIT": "MIT2026",
+  "Stanford": "SU2026",
+  "Harvard": "HU2026",
+  "Wharton": "WH2026",
+  "University of Chicago": "UC2026",
+  "Columbia": "CU2026",
+  "Duke": "DU2026",
+  "Yale": "YU2026",
+  "Princeton": "PU2026",
+  "Georgetown": "GU2026",
+  "UCLA": "LA2026",
+  "UC Berkeley": "UB2026",
+  "Michigan": "MI2026",
+  "Virginia": "VA2026",
+  "Cornell": "CO2026",
+  "Northwestern": "NW2026",
+  "Notre Dame": "ND2026",
+  "Other": "GUEST",
+};
+
+const SCHOOLS = Object.keys(SCHOOL_CODES);
 
 interface UserProfile {
   id: string;
@@ -663,6 +667,7 @@ function AuthModal({ onSubmit }: { onSubmit: (user: UserProfile) => void }) {
   const [mode, setMode] = useState<"new" | "returning">("new");
   const [name, setName] = useState("");
   const [school, setSchool] = useState("");
+  const [schoolCode, setSchoolCode] = useState("");
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [error, setError] = useState("");
@@ -687,7 +692,8 @@ function AuthModal({ onSubmit }: { onSubmit: (user: UserProfile) => void }) {
 
   const pinValid = pin.length === 4 && /^\d{4}$/.test(pin);
   const isLocked = Date.now() < lockedUntil;
-  const isNewValid = nameValid && school !== "" && pinValid && pin === confirmPin;
+  const schoolCodeValid = school !== "" && schoolCode.toUpperCase() === (SCHOOL_CODES[school] || "").toUpperCase();
+  const isNewValid = nameValid && school !== "" && schoolCodeValid && pinValid && pin === confirmPin;
   const isReturnValid = cleanName.trim().length >= 2 && cleanName.trim().length <= 3 && school !== "" && pinValid && !isLocked;
   const isValid = mode === "new" ? isNewValid : isReturnValid;
 
@@ -861,6 +867,31 @@ function AuthModal({ onSubmit }: { onSubmit: (user: UserProfile) => void }) {
                 ))}
               </select>
             </div>
+
+            {/* School access code — only for new accounts */}
+            {mode === "new" && school && (
+              <div>
+                <label className="text-[11px] font-semibold uppercase tracking-wider block mb-1.5" style={{ color: TEXT_SEC }}>
+                  School Code <span className="font-normal normal-case" style={{ color: TEXT_MUTED }}>(provided by your instructor)</span>
+                </label>
+                <input
+                  type="text"
+                  value={schoolCode}
+                  onChange={(e) => setSchoolCode(e.target.value.toUpperCase().slice(0, 10))}
+                  placeholder="Enter code..."
+                  maxLength={10}
+                  className="w-full px-4 py-3 rounded-xl text-sm font-mono font-bold outline-none transition-all tracking-wider"
+                  style={{
+                    background: BG_DARK,
+                    border: `2px solid ${schoolCodeValid ? `${GREEN}60` : schoolCode.length > 0 ? `${RED}60` : BORDER}`,
+                    color: "#fff",
+                  }}
+                />
+                {schoolCode.length > 0 && !schoolCodeValid && (
+                  <p className="text-[10px] mt-1" style={{ color: RED }}>Incorrect school code</p>
+                )}
+              </div>
+            )}
 
             {/* PIN input */}
             <div>
@@ -1854,7 +1885,8 @@ export default function LiveRacingPage() {
     const saved = loadUser();
     if (saved) {
       // Validate bankroll: cap at reasonable max to prevent localStorage tampering
-      const maxBankroll = Math.max(1000, saved.startingBankroll + (saved.racesPlayed * 500));
+      // Exotic bets can pay up to 500x, so max = starting + races * 5000 (generous)
+      const maxBankroll = Math.max(10000, saved.startingBankroll + (saved.racesPlayed * 5000));
       if (saved.bankroll > maxBankroll) {
         saved.bankroll = 1000;
         saved.totalProfit = 0;
