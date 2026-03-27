@@ -2277,21 +2277,20 @@ export default function LiveRacingPage() {
                 </div>
               )}
 
-              {/* RACING: names sliding across like a mini race */}
+              {/* RACING: live running order — reorders as positions change */}
               {phase === "racing" && (
                 <div className="p-4 rounded-2xl" style={{ background: BG_WHITE, border: `1.5px solid ${BORDER}` }}>
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 mb-3">
                     <motion.div animate={{ scale: [1, 1.15, 1] }} transition={{ repeat: Infinity, duration: 0.8 }}>
                       <Zap className="w-4 h-4" style={{ color: GOLD }} />
                     </motion.div>
-                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: TEXT }}>Live</span>
+                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: TEXT }}>Running Order</span>
                     <span className="ml-auto text-[10px] font-mono font-bold" style={{ color: GOLD }}>
                       {replayData ? `${(Math.min(1, (RACING_DURATION - timer) / RACING_DURATION) * race.distance).toFixed(1)}f / ${race.distance}f` : ""}
                     </span>
                   </div>
 
-                  {/* Mini race — names slide left to right */}
-                  <div className="space-y-0.5">
+                  <div className="space-y-1">
                     {replayData && (() => {
                       const prog = Math.min(1, (RACING_DURATION - timer) / RACING_DURATION);
                       const nHorses = race.horses.length;
@@ -2305,31 +2304,25 @@ export default function LiveRacingPage() {
                             break;
                           }
                         }
-                        const maxSpread = 0.15 * prog;
-                        const offset = ((pos - 1) / Math.max(1, nHorses - 1)) * maxSpread;
-                        const horseX = Math.max(0, Math.min(1, prog - offset));
-                        return { name: h.name, color: replayData.colors[i] || race.horses[i]?.color || "#888", x: horseX, idx: i };
-                      }).sort((a: { x: number }, b: { x: number }) => b.x - a.x);
+                        return { name: h.name, color: replayData.colors[i] || race.horses[i]?.color || "#888", pos };
+                      }).sort((a: { pos: number }, b: { pos: number }) => a.pos - b.pos);
 
                       return horsesWithPos.map((h, rank) => (
-                        <div key={h.name} className="relative h-6 overflow-hidden rounded" style={{ background: rank % 2 === 0 ? BG_CARD : BG_WHITE }}>
-                          {/* Name slides across the row */}
-                          <div
-                            className="absolute top-0 h-full flex items-center gap-1.5 whitespace-nowrap"
-                            style={{
-                              left: `${h.x * 75}%`,
-                              transition: "left 0.3s ease",
-                            }}
-                          >
-                            <div className="w-2 h-2 rounded-full shrink-0" style={{ background: h.color }} />
-                            <span
-                              className="text-[10px] font-bold"
-                              style={{ color: rank === 0 ? GOLD : rank < 3 ? TEXT : TEXT_SEC }}
-                            >
-                              {h.name}
-                            </span>
-                          </div>
-                        </div>
+                        <motion.div
+                          key={h.name}
+                          layout
+                          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                          className="flex items-center gap-2 px-2 py-1 rounded"
+                          style={{ background: rank === 0 ? `${GOLD}08` : "transparent" }}
+                        >
+                          <span className="text-[10px] font-bold w-4 text-right font-mono" style={{ color: rank < 3 ? GOLD : TEXT_MUTED }}>
+                            {rank + 1}
+                          </span>
+                          <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: h.color }} />
+                          <span className="text-[11px] font-semibold truncate" style={{ color: rank === 0 ? GOLD : rank < 3 ? TEXT : TEXT_SEC }}>
+                            {h.name}
+                          </span>
+                        </motion.div>
                       ));
                     })()}
                   </div>
