@@ -27,9 +27,11 @@ function writeJSON(filename: string, data: unknown) {
   console.log(`  → ${filename} (${(size / 1024).toFixed(0)} KB)`);
 }
 
+// Transfer model features — must be knowable from traditional data only (no GPS).
+// We predict GPS speed_figure from race conditions + outcome data.
 const TRANSFER_FEATURES = [
   "post_time_odds", "distance", "surface_code", "class_code",
-  "field_size", "early_position_avg", "official_position",
+  "field_size", "post_position", "official_position",
 ];
 
 function buildTransferFeatures(race: JoinedHorseRace): number[] | null {
@@ -37,11 +39,10 @@ function buildTransferFeatures(race: JoinedHorseRace): number[] | null {
   const fieldSize = isNaN(race.field_size) || race.field_size === 0 ? 8 : race.field_size;
   const surfaceCode = race.surface === "T" ? 1 : 0;
   const cc = classCode(race.race_type, race.grade);
-  // For transfer model, we use early_position_avg as a proxy (it comes from traditional POC data too)
-  const earlyPos = race.early_position_avg;
+  const postPos = isNaN(race.post_position) ? Math.ceil(fieldSize / 2) : race.post_position;
   const offPos = race.official_position;
 
-  const features = [ptOdds, race.distance, surfaceCode, cc, fieldSize, earlyPos, offPos];
+  const features = [ptOdds, race.distance, surfaceCode, cc, fieldSize, postPos, offPos];
 
   if (features.some((f) => isNaN(f) || !isFinite(f))) return null;
   return features;

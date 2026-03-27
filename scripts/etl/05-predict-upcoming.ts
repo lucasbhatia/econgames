@@ -204,7 +204,6 @@ function main() {
       // Apply the trained model to predict finish position
       const featureVector = [
         features.avg_speed, features.top_speed, features.stride_efficiency,
-        features.early_position_avg, features.late_acceleration,
         features.speed_figure, features.recent_best_figure,
         features.ml_odds_decimal, features.post_time_odds,
         features.field_size, features.distance, features.surface_code, features.class_code,

@@ -29,9 +29,11 @@ function writeJSON(filename: string, data: unknown) {
   console.log(`  → ${filename} (${(size / 1024).toFixed(0)} KB)`);
 }
 
+// IMPORTANT: Features must be knowable BEFORE the race happens.
+// early_position_avg and late_acceleration are same-race data (leakage).
+// We use only pre-race features: historical GPS metrics + race conditions.
 const FEATURE_NAMES = [
   "avg_speed", "top_speed", "stride_efficiency",
-  "early_position_avg", "late_acceleration",
   "speed_figure", "recent_best_figure",
   "ml_odds_decimal", "post_time_odds",
   "field_size", "distance", "surface_code", "class_code",
@@ -59,8 +61,6 @@ function buildFeatureVector(
     race.avg_speed,
     race.top_speed,
     race.stride_efficiency,
-    race.early_position_avg,
-    race.late_acceleration,
     speedFig,
     recentBest,
     mlOdds,
@@ -197,8 +197,8 @@ function main() {
   console.log(`\n  Ensemble Val R²: ${ensembleR2Val.toFixed(4)}  MAE: ${ensembleMaeVal.toFixed(3)}`);
 
   // ── A/B Comparison: Traditional-only baseline (no GPS features) ────────
-  // Features 7-12 are traditional: ml_odds, post_time_odds, field_size, distance, surface_code, class_code
-  const TRAD_INDICES = [7, 8, 9, 10, 11, 12]; // indices into FEATURE_NAMES
+  // Features 5-10 are traditional: ml_odds, post_time_odds, field_size, distance, surface_code, class_code
+  const TRAD_INDICES = [5, 6, 7, 8, 9, 10]; // indices into FEATURE_NAMES
   const tradTrainX: Matrix = trainX.map((row) => TRAD_INDICES.map((i) => row[i]));
   const tradValX: Matrix = valX.map((row) => TRAD_INDICES.map((i) => row[i]));
 
