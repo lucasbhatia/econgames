@@ -3,6 +3,7 @@
 
 import type { HorseData, RaceData, GateData } from "./race-data";
 import type { HorseProfile, RunningStyle } from "./horse-profiles";
+import { getHorseImageUrl } from "./horse-images";
 
 const DERIVED_COLORS = [
   "#e74c3c", "#3498db", "#2ecc71", "#9b59b6", "#e67e22",
@@ -181,7 +182,7 @@ export function deriveProfileFromGPS(
       { finish: horse.finish, date: race.date, track: race.track.trim() },
     ],
     color: DERIVED_COLORS[colorIndex % DERIVED_COLORS.length],
-    imageUrl: `/horses/${horse.name.replace(/[^a-zA-Z]/g, "")}.png`,
+    imageUrl: getHorseImageUrl(horse.name),
     sire: pick(SIRES, horse.name, 0),
     dam: pick(DAMS, horse.name, 1),
     age: 3 + (h % 4), // 3-6
