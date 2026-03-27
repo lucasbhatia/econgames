@@ -325,8 +325,8 @@ export default function RaceXRayPage() {
             <div
               className="overflow-hidden rounded-xl"
               style={{
-                backgroundColor: COLOR.card,
-                border: `1px solid ${COLOR.border}`,
+                backgroundColor: activeTab === "Replay" ? "transparent" : COLOR.card,
+                border: activeTab === "Replay" ? "none" : `1px solid ${COLOR.border}`,
               }}
             >
               <AnimatePresence mode="wait">
@@ -336,7 +336,7 @@ export default function RaceXRayPage() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.2 }}
-                  className="p-4"
+                  className={activeTab === "Replay" ? "" : "p-4"}
                 >
                   {activeTab === "Replay" && (
                     <RaceReplay
