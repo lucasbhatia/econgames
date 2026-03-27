@@ -657,12 +657,12 @@ function SimulatePageInner() {
               </h3>
               <ol className="space-y-3">
                 {[
-                  "Each horse has a GPS speed curve — their typical speed at every furlong of a race, measured from real GPS tracking data.",
-                  "For each simulated race, we add realistic randomness to every horse's speed. A horse averaging 17.2 ft/s might run 16.8 or 17.6 in any given race — just like real life.",
-                  "Running style matters: Front Runners get a speed boost early but tire late. Closers are slower early but kick hard in the stretch. Stalkers are neutral.",
-                  "Traditional handicapping factors are layered on top: distance suitability (is this horse's best distance?), surface preference (dirt vs turf specialist), recent form cycle (improving or declining?), and track bias.",
-                  "We run this 500+ times instantly as you add horses. The win percentage = how often each horse finished first. Fair odds = the inverse of win probability.",
-                  "This combines GPS analytics with traditional racing wisdom — the same approach Wall Street uses for risk modeling (Monte Carlo simulation), but applied to horse racing.",
+                  "Each horse has a GPS speed pattern — showing how fast they typically run through each segment of a race (about 200 meters each), measured from real GPS tracking sensors on the track.",
+                  "For each simulated race, we add realistic randomness. A horse averaging 12 mph might run 11.5 or 12.5 mph in any given race — just like real life. Some days you perform at your best, some days you don't.",
+                  "Running style matters: Front Runners sprint out to the lead early but can tire. Closers hang back and make a big push at the end. Stalkers sit in the middle and pick their moment. These styles interact — multiple front runners push each other too hard, which helps closers.",
+                  "Traditional factors are layered on top: is this horse's best distance? Do they prefer dirt or grass? Are they improving or declining recently? Does this track favor inside or outside runners?",
+                  "We re-run this race 500+ times instantly. The win percentage shows how often each horse won across all those simulated races. It's like watching the same race play out hundreds of times with realistic variation each time.",
+                  "This combines GPS analytics with traditional racing wisdom. The GPS data reveals things traditional stats can't — like how efficiently a horse uses its stride, or exactly where in the race they accelerate.",
                 ].map((text, i) => (
                   <li key={i} className="flex items-start gap-3">
                     <span
@@ -869,23 +869,23 @@ function SimulatePageInner() {
                           <th className="hidden pb-2 pr-2 text-left font-semibold sm:table-cell">
                             Style
                           </th>
-                          <th className="pb-2 pr-2 text-left font-semibold">
-                            Win %
+                          <th className="pb-2 pr-2 text-left font-semibold" title="How often this horse won across 500+ simulated races">
+                            Win Chance
                           </th>
-                          <th className="hidden pb-2 pr-2 text-left font-semibold lg:table-cell">
-                            Place %
+                          <th className="hidden pb-2 pr-2 text-left font-semibold lg:table-cell" title="How often this horse finished 1st or 2nd">
+                            Top 2
                           </th>
-                          <th className="hidden pb-2 pr-2 text-left font-semibold lg:table-cell">
-                            Show %
+                          <th className="hidden pb-2 pr-2 text-left font-semibold lg:table-cell" title="How often this horse finished in the top 3">
+                            Top 3
                           </th>
-                          <th className="pb-2 pr-2 text-right font-semibold">
-                            Fair Odds
+                          <th className="pb-2 pr-2 text-right font-semibold" title="What the odds should be based on the simulation — before the track takes their cut">
+                            True Odds
                           </th>
-                          <th className="hidden pb-2 pr-2 text-right font-semibold md:table-cell">
-                            $2 Payout
+                          <th className="hidden pb-2 pr-2 text-right font-semibold md:table-cell" title="What a $2 bet would pay if this horse wins at fair odds">
+                            $2 Pays
                           </th>
-                          <th className="hidden pb-2 pr-2 text-center font-semibold xl:table-cell">
-                            Factors
+                          <th className="hidden pb-2 pr-2 text-center font-semibold xl:table-cell" title="Key factors that affect this horse's chances: distance fit, surface preference, recent form">
+                            Key Factors
                           </th>
                           <th className="pb-2 text-center font-semibold">
                             &nbsp;

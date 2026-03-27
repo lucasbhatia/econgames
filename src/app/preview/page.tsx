@@ -14,6 +14,7 @@ import Link from "next/link";
 import { UPCOMING_RACES, type UpcomingRace, type RaceEntry } from "@/lib/data/upcoming-races";
 import type { RunningStyle } from "@/lib/data/horse-profiles";
 import { PIPELINE_ACTIVE, TRANSFER_DIAGNOSTICS, MODEL_DIAGNOSTICS } from "@/lib/data/pipeline-output";
+import { GlossaryTerm } from "@/components/GlossaryTerm";
 
 /* ── Style helpers ──────────────────────────────────────────────────────── */
 
@@ -509,47 +510,41 @@ export default function PreviewPage() {
                     Horse
                   </th>
                   <th className="px-4 py-3 text-xs font-semibold text-[#6b7280] uppercase tracking-wider">
-                    Style
+                    <GlossaryTerm term="front_runner">Running Style</GlossaryTerm>
                   </th>
                   <th className="px-4 py-3 text-xs font-semibold text-[#6b7280] uppercase tracking-wider">
-                    Speed Fig
+                    <GlossaryTerm term="speed_figure">Speed Rating</GlossaryTerm>
                     <span className="block font-normal normal-case tracking-normal text-[#9ca3af]" style={{ fontSize: 10 }}>
-                      (normalized 80-110, higher = faster)
+                      (100 = average, higher = faster)
                     </span>
                   </th>
                   <th className="px-4 py-3 text-xs font-semibold text-[#6b7280] uppercase tracking-wider hidden md:table-cell">
-                    Efficiency
+                    <GlossaryTerm term="stride_efficiency">Stride Efficiency</GlossaryTerm>
                     <span className="block font-normal normal-case tracking-normal text-[#9ca3af]" style={{ fontSize: 10 }}>
-                      (stride efficiency — higher = covers more ground per stride)
+                      (higher = more ground per stride = less wasted energy)
                     </span>
                   </th>
                   <th className="px-4 py-3 text-xs font-semibold text-[#6b7280] uppercase tracking-wider hidden md:table-cell">
-                    <span className="group relative cursor-help">
-                      Pace Fit
-                      <Info className="inline h-3 w-3 ml-1 text-[#9ca3af]" />
-                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 rounded-lg bg-[#1a1a2a] px-3 py-2 text-xs font-normal normal-case tracking-normal text-white opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-20 shadow-lg">
-                        Whether this horse&apos;s running style benefits from the projected pace scenario.
-                      </span>
-                    </span>
+                    <GlossaryTerm term="pace_fit">Style Match</GlossaryTerm>
                   </th>
                   <th className="px-4 py-3 text-xs font-semibold text-[#6b7280] uppercase tracking-wider">
-                    ML Odds
+                    <GlossaryTerm term="morning_line">Opening Odds</GlossaryTerm>
                     <span className="block font-normal normal-case tracking-normal text-[#9ca3af]" style={{ fontSize: 10 }}>
-                      (morning line — track handicapper&apos;s opening odds)
+                      (lower = more likely to win)
                     </span>
                   </th>
                   {PIPELINE_ACTIVE && pipelineLookup.size > 0 && (
                     <>
                       <th className="px-4 py-3 text-xs font-semibold text-[#6b7280] uppercase tracking-wider hidden lg:table-cell">
-                        Model Win%
+                        <GlossaryTerm term="win_pct">Win Chance</GlossaryTerm>
                         <span className="block font-normal normal-case tracking-normal text-[#9ca3af]" style={{ fontSize: 10 }}>
-                          (from {MODEL_DIAGNOSTICS.n_train.toLocaleString()} race model)
+                          (from {MODEL_DIAGNOSTICS.n_train.toLocaleString()} simulated races)
                         </span>
                       </th>
                       <th className="px-4 py-3 text-xs font-semibold text-[#6b7280] uppercase tracking-wider hidden lg:table-cell">
-                        GPS Edge
+                        <GlossaryTerm term="gps_edge">GPS Advantage</GlossaryTerm>
                         <span className="block font-normal normal-case tracking-normal text-[#9ca3af]" style={{ fontSize: 10 }}>
-                          (model vs morning line)
+                          (green = GPS sees hidden value)
                         </span>
                       </th>
                     </>

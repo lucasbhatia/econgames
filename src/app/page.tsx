@@ -181,12 +181,12 @@ export default function Home() {
               <div className="p-4 bg-[#b8941f10] text-[#b8941f]">GPS Data</div>
             </div>
             {[
-              { metric: "Speed", traditional: "Final time only (total race)", gps: "Speed at every half-furlong — see acceleration, fatigue, bursts" },
-              { metric: "Position", traditional: "Finish position + maybe a few call points", gps: "Position at every gate — see exactly where moves happen" },
-              { metric: "Stride", traditional: "Not available", gps: "Stride length at every point — reveals biomechanical efficiency" },
-              { metric: "Running Style", traditional: "Subjective label from handicapper", gps: "Data-driven: classified from actual early/late speed ratios" },
-              { metric: "Race Replay", traditional: "Video only (hard to compare horses)", gps: "Interactive replay with speed overlays, position tracking, comparisons" },
-              { metric: "Predictions", traditional: "Based on past finishes and odds", gps: "Monte Carlo simulation using actual speed curves + traditional factors" },
+              { metric: "Speed", traditional: "Only the total race time — you know they were fast, but not when or where", gps: "Speed at every 200m checkpoint — see exactly when a horse accelerated, faded, or found another gear" },
+              { metric: "Position", traditional: "Finish position and maybe 2-3 updates during the race", gps: "Position tracked every 200m — see the exact moment a horse made its move or got stuck in traffic" },
+              { metric: "Stride", traditional: "Not available at all", gps: "Stride length and efficiency measured throughout — like checking a runner's form at every stage of a marathon" },
+              { metric: "Running Style", traditional: "A subjective guess by a handicapper", gps: "Classified from real data — the GPS proves whether a horse leads, sits behind, or comes from the back" },
+              { metric: "Race Replay", traditional: "TV footage — hard to compare multiple horses at once", gps: "Interactive animated replay with speed overlays, position tracking, and head-to-head comparisons" },
+              { metric: "Predictions", traditional: "Based only on past finishes and betting odds", gps: "Simulates the race 500+ times using each horse's actual GPS speed pattern and stride data" },
             ].map((row, i) => (
               <div key={i} className="grid grid-cols-3 text-sm border-b border-[#e5e2db] last:border-0">
                 <div className="p-4 font-semibold text-[#1a1a2a]">{row.metric}</div>
