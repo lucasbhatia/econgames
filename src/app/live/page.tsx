@@ -295,6 +295,7 @@ function calculateBetPayout(bet: Bet, finishOrder: string[], odds: RaceCard["odd
     }
 
     case "trifecta":
+      if (!third) return { won: false, payout: 0 }; // ODDS AUDIT FIX [P3]: Guard against <3 finishers
       if (bet.horseNames[0] === first && bet.horseNames[1] === second && bet.horseNames[2] === third) {
         const o1 = odds[first]?.win ?? 2;
         const o2 = odds[second]?.win ?? 2;
@@ -304,6 +305,7 @@ function calculateBetPayout(bet: Bet, finishOrder: string[], odds: RaceCard["odd
       return { won: false, payout: 0 };
 
     case "trifecta_box": {
+      if (!third) return { won: false, payout: 0 }; // ODDS AUDIT FIX [P3]
       const top3 = [first, second, third];
       if (bet.horseNames.every((n) => top3.includes(n))) {
         const o1 = odds[first]?.win ?? 2;
@@ -315,6 +317,7 @@ function calculateBetPayout(bet: Bet, finishOrder: string[], odds: RaceCard["odd
     }
 
     case "trifecta_key": {
+      if (!third) return { won: false, payout: 0 }; // ODDS AUDIT FIX [P3]
       // First horse is the key (must win), others fill 2nd/3rd in any order
       if (bet.horseNames[0] === first) {
         const others = bet.horseNames.slice(1);
@@ -328,7 +331,9 @@ function calculateBetPayout(bet: Bet, finishOrder: string[], odds: RaceCard["odd
       return { won: false, payout: 0 };
     }
 
+    // ODDS AUDIT FIX [P3]: Guard superfecta against fields with <4 finishers
     case "superfecta":
+      if (!fourth) return { won: false, payout: 0 }; // Not enough finishers
       if (bet.horseNames[0] === first && bet.horseNames[1] === second &&
           bet.horseNames[2] === third && bet.horseNames[3] === fourth) {
         const o1 = odds[first]?.win ?? 2;
@@ -340,6 +345,7 @@ function calculateBetPayout(bet: Bet, finishOrder: string[], odds: RaceCard["odd
       return { won: false, payout: 0 };
 
     case "superfecta_box": {
+      if (!fourth) return { won: false, payout: 0 }; // Not enough finishers
       const top4 = [first, second, third, fourth];
       if (bet.horseNames.every((n) => top4.includes(n))) {
         const o1 = odds[first]?.win ?? 2;
@@ -790,7 +796,13 @@ function BetSlipBuilder({
   }, [canPlace, betType, selectedHorses, amount, race.odds]);
 
   const straightTypes: BetType[] = ["win", "place", "show"];
-  const exoticTypes: BetType[] = ["exacta", "exacta_box", "trifecta", "trifecta_box", "trifecta_key", "superfecta", "superfecta_box"];
+  // ODDS AUDIT FIX [P3]: Only show exotic bet types when field is large enough
+  const fieldSize = race.horses.length;
+  const exoticTypes: BetType[] = [
+    ...(fieldSize >= 2 ? ["exacta", "exacta_box"] as BetType[] : []),
+    ...(fieldSize >= 3 ? ["trifecta", "trifecta_box", "trifecta_key"] as BetType[] : []),
+    ...(fieldSize >= 4 ? ["superfecta", "superfecta_box"] as BetType[] : []),
+  ];
 
   return (
     <div className="space-y-3">

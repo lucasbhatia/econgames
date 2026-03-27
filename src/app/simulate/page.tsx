@@ -851,6 +851,13 @@ function SimulatePageInner() {
                 {/* Odds Table */}
                 {liveResults && liveResults.horses.length > 0 ? (
                   <div className="overflow-x-auto">
+                    {/* ODDS AUDIT FIX [P5]: Inform user these are fair odds with no house edge */}
+                    <div className="flex items-center gap-2 mb-3 px-1">
+                      <span className="inline-block h-2 w-2 rounded-full bg-[#16a34a]" />
+                      <span className="text-xs" style={{ color: TEXT_MUTED }}>
+                        Fair odds — no house edge applied. In Race Night, a 15% margin is added (like a real track).
+                      </span>
+                    </div>
                     <table className="w-full" style={{ fontSize: 14 }}>
                       <thead>
                         <tr
