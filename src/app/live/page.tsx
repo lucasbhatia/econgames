@@ -16,7 +16,6 @@ import {
   Ticket,
   TrendingUp,
   Zap,
-  RotateCcw,
   AlertCircle,
   Clock,
   Eye,
@@ -135,32 +134,28 @@ interface Bet {
   combinations: number;
 }
 
-// School access codes — must enter correct code to join a school
-// This prevents people from creating fake accounts under other schools
-const SCHOOL_CODES: Record<string, string> = {
-  "University of Kentucky": "UK2026",
-  "NYU": "NYU2026",
-  "MIT": "MIT2026",
-  "Stanford": "SU2026",
-  "Harvard": "HU2026",
-  "Wharton": "WH2026",
-  "University of Chicago": "UC2026",
-  "Columbia": "CU2026",
-  "Duke": "DU2026",
-  "Yale": "YU2026",
-  "Princeton": "PU2026",
-  "Georgetown": "GU2026",
-  "UCLA": "LA2026",
-  "UC Berkeley": "UB2026",
-  "Michigan": "MI2026",
-  "Virginia": "VA2026",
-  "Cornell": "CO2026",
-  "Northwestern": "NW2026",
-  "Notre Dame": "ND2026",
-  "Other": "GUEST",
-};
-
-const SCHOOLS = Object.keys(SCHOOL_CODES);
+const SCHOOLS = [
+  "University of Kentucky",
+  "NYU",
+  "MIT",
+  "Stanford",
+  "Harvard",
+  "Wharton",
+  "University of Chicago",
+  "Columbia",
+  "Duke",
+  "Yale",
+  "Princeton",
+  "Georgetown",
+  "UCLA",
+  "UC Berkeley",
+  "Michigan",
+  "Virginia",
+  "Cornell",
+  "Northwestern",
+  "Notre Dame",
+  "Other",
+];
 
 interface UserProfile {
   id: string;
@@ -667,7 +662,6 @@ function AuthModal({ onSubmit }: { onSubmit: (user: UserProfile) => void }) {
   const [mode, setMode] = useState<"new" | "returning">("new");
   const [name, setName] = useState("");
   const [school, setSchool] = useState("");
-  const [schoolCode, setSchoolCode] = useState("");
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [error, setError] = useState("");
@@ -692,8 +686,7 @@ function AuthModal({ onSubmit }: { onSubmit: (user: UserProfile) => void }) {
 
   const pinValid = pin.length === 4 && /^\d{4}$/.test(pin);
   const isLocked = Date.now() < lockedUntil;
-  const schoolCodeValid = school !== "" && schoolCode.toUpperCase() === (SCHOOL_CODES[school] || "").toUpperCase();
-  const isNewValid = nameValid && school !== "" && schoolCodeValid && pinValid && pin === confirmPin;
+  const isNewValid = nameValid && school !== "" && pinValid && pin === confirmPin;
   const isReturnValid = cleanName.trim().length >= 2 && cleanName.trim().length <= 3 && school !== "" && pinValid && !isLocked;
   const isValid = mode === "new" ? isNewValid : isReturnValid;
 
@@ -867,31 +860,6 @@ function AuthModal({ onSubmit }: { onSubmit: (user: UserProfile) => void }) {
                 ))}
               </select>
             </div>
-
-            {/* School access code — only for new accounts */}
-            {mode === "new" && school && (
-              <div>
-                <label className="text-[11px] font-semibold uppercase tracking-wider block mb-1.5" style={{ color: TEXT_SEC }}>
-                  School Code <span className="font-normal normal-case" style={{ color: TEXT_MUTED }}>(provided by your instructor)</span>
-                </label>
-                <input
-                  type="text"
-                  value={schoolCode}
-                  onChange={(e) => setSchoolCode(e.target.value.toUpperCase().slice(0, 10))}
-                  placeholder="Enter code..."
-                  maxLength={10}
-                  className="w-full px-4 py-3 rounded-xl text-sm font-mono font-bold outline-none transition-all tracking-wider"
-                  style={{
-                    background: BG_DARK,
-                    border: `2px solid ${schoolCodeValid ? `${GREEN}60` : schoolCode.length > 0 ? `${RED}60` : BORDER}`,
-                    color: "#fff",
-                  }}
-                />
-                {schoolCode.length > 0 && !schoolCodeValid && (
-                  <p className="text-[10px] mt-1" style={{ color: RED }}>Incorrect school code</p>
-                )}
-              </div>
-            )}
 
             {/* PIN input */}
             <div>
@@ -2089,30 +2057,7 @@ export default function LiveRacingPage() {
     setBets((prev) => prev.filter((b) => b.id !== betId));
   }, [phase]);
 
-  /* ---- Reset bankroll ---- */
-  const resetBankroll = useCallback(() => {
-    if (!user) return;
-    const reset: UserProfile = {
-      ...user,
-      bankroll: 1000,
-      startingBankroll: 1000,
-      totalProfit: 0,
-      racesPlayed: 0,
-      biggestWin: 0,
-      history: [],
-    };
-    setUser(reset);
-    saveUser(reset);
-    syncPlayer({
-      id: reset.id,
-      name: reset.name,
-      school: reset.school,
-      bankroll: reset.bankroll,
-      total_profit: reset.totalProfit,
-      races_played: reset.racesPlayed,
-      biggest_win: reset.biggestWin,
-    });
-  }, [user, syncPlayer]);
+  /* ---- No reset — you lose your $1,000, that's on you ---- */
 
   /* ---- Phase labels ---- */
   const phaseLabel = phase === "betting" ? "Place Your Bets"
@@ -2615,16 +2560,11 @@ export default function LiveRacingPage() {
                       })}
                     </div>
 
-                    {/* Reset bankroll */}
+                    {/* Busted message — no reset */}
                     {user.bankroll <= 0 && (
-                      <button
-                        onClick={resetBankroll}
-                        className="w-full mt-2 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1"
-                        style={{ background: RED, color: "#fff" }}
-                      >
-                        <RotateCcw className="w-3 h-3" />
-                        Busted! Reset to $1,000
-                      </button>
+                      <div className="mt-2 py-2 rounded-lg text-center text-xs font-bold" style={{ background: `${RED}10`, color: RED, border: `1px solid ${RED}25` }}>
+                        Bankroll depleted — game over
+                      </div>
                     )}
                   </div>
                 )}
@@ -2676,26 +2616,16 @@ export default function LiveRacingPage() {
                   </div>
                 )}
 
-                {/* Compact actions row */}
+                {/* Switch account */}
                 {user && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setShowNameEntry(true)}
-                      className="flex-1 py-2 rounded-lg text-[10px] font-medium flex items-center justify-center gap-1"
-                      style={{ color: TEXT_MUTED, background: BG_WHITE, border: `1px solid ${BORDER}` }}
-                    >
-                      <LogIn className="w-3 h-3" />
-                      Switch
-                    </button>
-                    <button
-                      onClick={resetBankroll}
-                      className="flex-1 py-2 rounded-lg text-[10px] font-medium flex items-center justify-center gap-1"
-                      style={{ color: TEXT_MUTED, background: BG_WHITE, border: `1px solid ${BORDER}` }}
-                    >
-                      <RotateCcw className="w-3 h-3" />
-                      Reset
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => setShowNameEntry(true)}
+                    className="w-full py-2 rounded-lg text-[10px] font-medium flex items-center justify-center gap-1"
+                    style={{ color: TEXT_MUTED, background: BG_WHITE, border: `1px solid ${BORDER}` }}
+                  >
+                    <LogIn className="w-3 h-3" />
+                    Switch Account
+                  </button>
                 )}
               </div>
             </div>
