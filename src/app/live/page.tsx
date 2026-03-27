@@ -1554,83 +1554,7 @@ function ResultsPanel({
         })()
       )}
 
-      {/* Bet Results */}
-      {betResults.length > 0 && (
-        <div>
-          <h3 className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: TEXT_SEC }}>
-            Your Bets
-          </h3>
-          <div className="space-y-1.5">
-            {betResults.map((br, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.6 + i * 0.1 }}
-                className="flex items-center gap-2 px-3 py-2.5 rounded-lg"
-                style={{
-                  background: br.won ? `${GREEN}08` : `${RED}05`,
-                  border: `1.5px solid ${br.won ? GREEN : `${RED}30`}`,
-                }}
-              >
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.8 + i * 0.1, type: "spring" }}
-                >
-                  {br.won ? (
-                    <Check className="w-4 h-4" style={{ color: GREEN }} />
-                  ) : (
-                    <X className="w-4 h-4" style={{ color: RED }} />
-                  )}
-                </motion.div>
-                <span
-                  className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0"
-                  style={{
-                    background: br.won ? `${GREEN}15` : `${RED}10`,
-                    color: br.won ? GREEN : RED,
-                  }}
-                >
-                  {BET_TYPE_CONFIG[br.bet.type].label}
-                </span>
-                <span className="flex-1 text-[11px] font-medium truncate" style={{ color: TEXT }}>
-                  {br.bet.horseNames.join(" → ")}
-                </span>
-                <span className="font-mono font-bold text-sm shrink-0" style={{ color: br.won ? GREEN : RED }}>
-                  {br.won ? `+$${(br.payout - br.bet.totalCost).toLocaleString()}` : `-$${br.bet.totalCost}`}
-                </span>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Net summary */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1 }}
-            className="mt-3 flex items-center justify-between px-3 py-2.5 rounded-lg"
-            style={{
-              background: netProfit >= 0 ? `${GREEN}08` : `${RED}06`,
-              border: `1.5px solid ${netProfit >= 0 ? GREEN : RED}`,
-            }}
-          >
-            <span className="text-xs font-semibold" style={{ color: TEXT }}>
-              Race P&L
-            </span>
-            <span className="font-mono font-bold text-lg" style={{ color: netProfit >= 0 ? GREEN : RED }}>
-              {netProfit >= 0 ? "+" : ""}{netProfit.toLocaleString()}
-            </span>
-          </motion.div>
-        </div>
-      )}
-
-      {betResults.length === 0 && (
-        <div className="text-center py-6 rounded-xl" style={{ background: BG_CARD, border: `1px dashed ${BORDER}` }}>
-          <Ticket className="w-5 h-5 mx-auto mb-2" style={{ color: TEXT_MUTED }} />
-          <p className="text-xs font-medium" style={{ color: TEXT_MUTED }}>No bets placed this race</p>
-          <p className="text-[10px] mt-1" style={{ color: TEXT_MUTED }}>Place bets during the betting phase</p>
-        </div>
-      )}
+      {/* Bet results are shown in the persistent "Your Bets This Race" card below */}
     </div>
   );
 }
@@ -2615,24 +2539,7 @@ export default function LiveRacingPage() {
                     })()}
                   </div>
 
-                  {/* Your bets */}
-                  <div className="pt-3" style={{ borderTop: `1px solid ${BORDER}` }}>
-                    <div className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: TEXT_SEC }}>Your Bets</div>
-                    {bets.length > 0 ? (
-                      <div className="space-y-1">
-                        {bets.map((bet) => (
-                          <div key={bet.id} className="flex items-center justify-between px-3 py-2 rounded-lg text-xs"
-                            style={{ background: BG_CARD, border: `1px solid ${BORDER}` }}>
-                            <span className="font-semibold px-1.5 py-0.5 rounded text-[10px]" style={{ background: `${GOLD}10`, color: GOLD }}>{BET_TYPE_CONFIG[bet.type].label}</span>
-                            <span className="flex-1 truncate px-2" style={{ color: TEXT }}>{bet.horseNames.join(" → ")}</span>
-                            <span className="font-mono font-bold" style={{ color: TEXT }}>${bet.totalCost}</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-xs" style={{ color: TEXT_MUTED }}>No bets this race</p>
-                    )}
-                  </div>
+                  {/* Bets shown in persistent card below */}
                 </div>
               )}
 
@@ -2649,8 +2556,8 @@ export default function LiveRacingPage() {
                 </div>
               )}
 
-              {/* YOUR BETS — persistent across post_parade, racing, results when bets exist */}
-              {phase !== "betting" && bets.length > 0 && (
+              {/* YOUR BETS — persistent across post_parade, racing, results */}
+              {phase !== "betting" && (
                 <div className="p-4 rounded-2xl" style={{ background: BG_WHITE, border: `1.5px solid ${BORDER}` }}>
                   <div className="flex items-center gap-2 mb-3">
                     <Ticket className="w-4 h-4" style={{ color: GOLD }} />
@@ -2662,6 +2569,11 @@ export default function LiveRacingPage() {
                     </span>
                   </div>
                   <div className="space-y-1.5">
+                    {bets.length === 0 && (
+                      <div className="text-center py-4 rounded-lg" style={{ background: BG_CARD }}>
+                        <p className="text-xs" style={{ color: TEXT_MUTED }}>No bets placed this race</p>
+                      </div>
+                    )}
                     {bets.map((bet) => {
                       const result = betResults.find((r) => r.bet.id === bet.id);
                       return (
