@@ -73,13 +73,18 @@ function simulateOneRace(horses: SimHorse[], distF: number, surface: string, tra
 
 function formatOdds(winPct: number): string {
   if (winPct <= 0) return "99-1";
-  if (winPct >= 100) return "1-99";
+  if (winPct >= 100) return "1-20";
   const odds = (100 / winPct) - 1;
   if (odds < 1) {
-    const inv = Math.round(1 / odds);
-    return `${inv > 99 ? 99 : inv}-${Math.max(1, Math.round(inv * odds))} ON`;
+    // Favorite: show as "X-Y ON" (e.g., "1-2" means bet $2 to win $1)
+    if (odds <= 0.2) return "1-5";
+    if (odds <= 0.4) return "2-5";
+    if (odds <= 0.6) return "3-5";
+    if (odds <= 0.8) return "4-5";
+    return "Even";
   }
-  return `${odds.toFixed(1)}-1`;
+  if (odds < 2) return `${odds.toFixed(1)}-1`;
+  return `${Math.round(odds)}-1`;
 }
 
 export function runMonteCarlo(config: SimConfig): SimResults {
@@ -177,7 +182,7 @@ export function simToReplayData(
       cumTime += t1;
       timeline.push({ time: cumTime, speed: speeds[g] });
 
-      // Second half of furlong (slight variation)
+      // Second half of furlong (same speed within furlong)
       const t2 = halfDist / speeds[g];
       cumTime += t2;
       timeline.push({ time: cumTime, speed: speeds[g] });

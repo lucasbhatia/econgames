@@ -304,7 +304,7 @@ function SimulatePageInner() {
 
   const paceScenario = useMemo(
     () => getPaceScenario(selectedHorses),
-    [selectedHorses]
+    [selectedHorses, distance]
   );
 
   const topInsight = useMemo(
@@ -601,7 +601,7 @@ function SimulatePageInner() {
 
   /* ---- style badge color map ---- */
   const styleColors: Record<string, string> = {
-    "Front Runner": "#1a3a2a",
+    "Front Runner": TEXT,
     Stalker: "#5b3e8a",
     Closer: "#b8941f",
   };
@@ -879,6 +879,12 @@ function SimulatePageInner() {
                           <th className="pb-2 pr-2 text-left font-semibold">
                             Win %
                           </th>
+                          <th className="hidden pb-2 pr-2 text-left font-semibold lg:table-cell">
+                            Place %
+                          </th>
+                          <th className="hidden pb-2 pr-2 text-left font-semibold lg:table-cell">
+                            Show %
+                          </th>
                           <th className="pb-2 pr-2 text-right font-semibold">
                             Fair Odds
                           </th>
@@ -1026,6 +1032,18 @@ function SimulatePageInner() {
                                   </div>
                                 </div>
                               </td>
+                              {/* Place % */}
+                              <td className="hidden py-2.5 pr-2 lg:table-cell">
+                                <span className="tabular-nums" style={{ color: TEXT_SEC }}>
+                                  {h.placePct.toFixed(1)}%
+                                </span>
+                              </td>
+                              {/* Show % */}
+                              <td className="hidden py-2.5 pr-2 lg:table-cell">
+                                <span className="tabular-nums" style={{ color: TEXT_SEC }}>
+                                  {h.showPct.toFixed(1)}%
+                                </span>
+                              </td>
                               {/* Fair Odds */}
                               <td
                                 className="py-2.5 pr-2 text-right font-mono tabular-nums"
@@ -1047,7 +1065,7 @@ function SimulatePageInner() {
                                 className="hidden py-2.5 pr-2 text-right font-mono tabular-nums md:table-cell"
                                 style={{
                                   color:
-                                    h.winPct > 0 ? "#1a3a2a" : TEXT_MUTED,
+                                    h.winPct > 0 ? TEXT : TEXT_MUTED,
                                   fontWeight: 600,
                                   fontSize: 13,
                                 }}
