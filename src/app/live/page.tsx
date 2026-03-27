@@ -1822,7 +1822,7 @@ export default function LiveRacingPage() {
   const [mounted, setMounted] = useState(false);
 
   /* ---- Supabase leaderboard ---- */
-  const { leaderboard, schoolStandings, loading: lbLoading, connected: lbConnected, syncPlayer, logBets, recentWins } = useLeaderboard();
+  const { leaderboard, schoolStandings, loading: lbLoading, connected: lbConnected, syncPlayer, logBets, refetchWins, recentWins } = useLeaderboard();
 
   /* ---- Race state ---- */
   const [epoch, setEpoch] = useState(0);
@@ -1990,7 +1990,7 @@ export default function LiveRacingPage() {
         biggest_win: updatedUser.biggestWin,
       });
 
-      // Log bets to Supabase
+      // Log bets to Supabase, then refresh recent wins
       logBets(
         results.map((r) => ({
           player_id: updatedUser.id,
@@ -2003,7 +2003,10 @@ export default function LiveRacingPage() {
           payout: r.payout,
           won: r.won,
         }))
-      );
+      ).then(() => {
+        // Delay to let Supabase insert propagate
+        setTimeout(refetchWins, 500);
+      });
 
       // Show celebration if any bet won
       if (winnings > 0) {

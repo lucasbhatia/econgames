@@ -232,8 +232,13 @@ export function useLeaderboard() {
             selections: b.selections as string[],
           }))
         );
+      } else {
+        // No winning bets yet — keep existing or clear
+        if (!data || data.length === 0) setRecentWins([]);
       }
-    } catch {}
+    } catch (err) {
+      console.warn("Recent wins fetch failed:", err);
+    }
   }, []);
 
   return {
@@ -244,6 +249,7 @@ export function useLeaderboard() {
     syncPlayer,
     logBets,
     refetch: fetchLeaderboard,
+    refetchWins: fetchRecentWins,
     recentWins,
   };
 }
