@@ -1,3 +1,7 @@
+// AUDIT NOTE: This file contains DEMO DATA for the 7-stage pipeline visualization.
+// It is NOT used for real predictions, live races, or any user-facing analytics.
+// Real pipeline output comes from scripts/etl/ → processed/ → pipeline-output.ts.
+
 import type {
   IngestResult,
   UnderstandResult,

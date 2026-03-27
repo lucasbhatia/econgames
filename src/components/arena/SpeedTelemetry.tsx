@@ -90,7 +90,7 @@ function TelemetryTooltip({
               </span>
               <span className="flex items-center gap-3">
                 <span className="font-mono font-semibold" style={{ color: "#1a1a2a" }}>
-                  {entry.value.toFixed(1)} ft/s
+                  {entry.value.toFixed(1)} ft/s ({(entry.value * 0.6818).toFixed(0)} mph)
                 </span>
                 {diff < 0 && (
                   <span className="font-mono" style={{ fontSize: 13, color: "#ef4444" }}>

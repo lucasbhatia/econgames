@@ -231,7 +231,7 @@ export default function RaceReplay({ horses, colors, distance }: RaceReplayProps
             </span>
             <div className="w-2.5 h-2.5 rounded-sm" style={{ background: leader.color }} />
             <span className="text-xs font-bold" style={{ color: TEXT_WHITE }}>{leader.name}</span>
-            <span className="text-[10px] font-mono" style={{ color: GOLD }}>{leader.currentSpeed} ft/s</span>
+            <span className="text-[10px] font-mono" style={{ color: GOLD }}>{(Number(leader.currentSpeed) * 0.6818).toFixed(0)} mph</span>
           </div>
         )}
       </div>

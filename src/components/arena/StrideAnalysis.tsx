@@ -67,18 +67,18 @@ function CustomTooltip({
       </p>
       <div style={{ display: "flex", flexDirection: "column", gap: "2px", fontSize: "13px", color: "#6b7280" }}>
         <p style={{ margin: 0 }}>
-          Gate: <span style={{ color: "#1a1a2a" }}>{d.gate}</span>
+          Checkpoint: <span style={{ color: "#1a1a2a" }}>{d.gate}</span>
         </p>
         <p style={{ margin: 0 }}>
-          Stride: <span style={{ color: "#1a1a2a" }}>{d.x.toFixed(2)} ft</span>
+          Stride length: <span style={{ color: "#1a1a2a" }}>{d.x.toFixed(1)} ft ({(d.x * 0.3048).toFixed(1)} m)</span>
         </p>
         <p style={{ margin: 0 }}>
-          Speed: <span style={{ color: "#1a1a2a" }}>{d.y.toFixed(2)} ft/s</span>
+          Speed: <span style={{ color: "#1a1a2a" }}>{d.y.toFixed(1)} ft/s ({(d.y * 0.6818).toFixed(0)} mph)</span>
         </p>
         <p style={{ margin: 0 }}>
-          Efficiency:{" "}
+          Stride efficiency:{" "}
           <span style={{ fontWeight: 600, color: "#b8941f" }}>
-            {d.efficiency.toFixed(3)}
+            {d.efficiency.toFixed(2)}
           </span>
         </p>
       </div>
