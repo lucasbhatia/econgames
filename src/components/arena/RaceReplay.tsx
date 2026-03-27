@@ -30,14 +30,32 @@ interface RaceReplayProps {
 /* ------------------------------------------------------------------ */
 
 const GOLD = "#b8941f";
-const BG_DARK = "#1a1a2a";
-const BG_LANE = "#1e1e30";
-const TEXT_MUTED = "#9ca3af";
-const BORDER_DARK = "rgba(255,255,255,0.08)";
+const BG_DARK = "#131a24";
+const BG_LANE = "#182231";
+const BG_LANE_ALT = "#1c2840";
+const TEXT_WHITE = "#e8edf2";
+const TEXT_DIM = "#6b7d8d";
 
 const BASE_DURATION = 10; // seconds at 1x
-const LANE_HEIGHT = 44;
-const LABEL_WIDTH = 110;
+const LANE_HEIGHT = 42;
+const LABEL_WIDTH = 120;
+
+/* ------------------------------------------------------------------ */
+/*  Inline styles for gallop keyframe (injected once)                  */
+/* ------------------------------------------------------------------ */
+
+const GALLOP_CSS = `
+@keyframes gallop {
+  0%   { transform: translateX(var(--hx, 0)) scaleY(1) translateY(0); }
+  25%  { transform: translateX(var(--hx, 0)) scaleY(1.06) translateY(-1px); }
+  50%  { transform: translateX(var(--hx, 0)) scaleY(1) translateY(0); }
+  75%  { transform: translateX(var(--hx, 0)) scaleY(0.94) translateY(1px); }
+  100% { transform: translateX(var(--hx, 0)) scaleY(1) translateY(0); }
+}
+@keyframes gallop-still {
+  0%, 100% { transform: translateX(var(--hx, 0)) scaleY(1); }
+}
+`;
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -68,38 +86,27 @@ function lerpGate(
   };
 }
 
+function ordinal(n: number): string {
+  if (n === 1) return "1st";
+  if (n === 2) return "2nd";
+  if (n === 3) return "3rd";
+  return `${n}th`;
+}
+
 /* ------------------------------------------------------------------ */
-/*  Horse Silhouette                                                   */
+/*  Horse Silhouette SVG — compact racing silhouette                   */
 /* ------------------------------------------------------------------ */
 
-function HorseSilhouette({ color, galloping, size = 24 }: { color: string; galloping: boolean; size?: number }) {
+function HorseSilhouette({ color, size = 28 }: { color: string; size?: number }) {
   return (
-    <svg width={size} height={size * 0.7} viewBox="0 0 40 28" fill="none">
+    <svg width={size} height={size * 0.65} viewBox="0 0 40 26" fill="none">
       <path
-        d={galloping
-          ? "M2 20L6 14L10 16L14 12L18 14L22 10L26 12L30 8L34 10L38 6L36 14L38 20L34 22L30 18L26 22L22 18L18 22L14 18L10 22L6 18L2 22Z"
-          : "M4 18L8 14L12 12L16 14L20 10L24 12L28 8L32 10L36 8L38 12L36 18L34 22L30 22L28 18L24 22L20 22L18 18L14 22L10 22L8 18L4 22Z"
-        }
+        d="M4 18L8 14L12 12L16 14L20 10L24 12L28 8L32 10L36 8L38 12L36 18L34 22L30 22L28 18L24 22L20 22L18 18L14 22L10 22L8 18L4 22Z"
         fill={color}
         opacity={0.9}
       />
-      <circle cx="36" cy={galloping ? "5" : "7"} r="3.5" fill={color} />
-      <circle cx="37.5" cy={galloping ? "4" : "6"} r="1" fill="white" />
-      {galloping ? (
-        <>
-          <rect x="8" y="20" width="2" height="6" rx="1" fill={color} opacity={0.7} />
-          <rect x="14" y="18" width="2" height="8" rx="1" fill={color} opacity={0.7} transform="rotate(-15 14 18)" />
-          <rect x="24" y="20" width="2" height="6" rx="1" fill={color} opacity={0.7} />
-          <rect x="30" y="16" width="2" height="10" rx="1" fill={color} opacity={0.7} transform="rotate(10 30 16)" />
-        </>
-      ) : (
-        <>
-          <rect x="10" y="20" width="2" height="6" rx="1" fill={color} opacity={0.7} />
-          <rect x="16" y="20" width="2" height="6" rx="1" fill={color} opacity={0.7} />
-          <rect x="24" y="20" width="2" height="6" rx="1" fill={color} opacity={0.7} />
-          <rect x="30" y="20" width="2" height="6" rx="1" fill={color} opacity={0.7} />
-        </>
-      )}
+      <circle cx="36" cy="7" r="3" fill={color} />
+      <circle cx="37.5" cy="6" r="0.8" fill="white" />
     </svg>
   );
 }
@@ -109,28 +116,33 @@ function HorseSilhouette({ color, galloping, size = 24 }: { color: string; gallo
 /* ------------------------------------------------------------------ */
 
 export default function RaceReplay({ horses, colors, distance }: RaceReplayProps) {
-  const [playing, setPlaying] = useState(true);
-  const [speed, setSpeed] = useState(1);
   const [progress, setProgress] = useState(0);
-  const rafRef = useRef<number | null>(null);
-  const lastTimeRef = useRef<number | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const [speed, setSpeed] = useState(1);
   const progressRef = useRef(0);
+  const lastTimeRef = useRef<number | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const cssInjectedRef = useRef(false);
 
-  progressRef.current = progress;
+  // Inject gallop CSS once
+  useEffect(() => {
+    if (cssInjectedRef.current) return;
+    cssInjectedRef.current = true;
+    const style = document.createElement("style");
+    style.textContent = GALLOP_CSS;
+    document.head.appendChild(style);
+    return () => { document.head.removeChild(style); };
+  }, []);
 
   const tick = useCallback(
     (timestamp: number) => {
-      if (lastTimeRef.current === null) {
-        lastTimeRef.current = timestamp;
-        rafRef.current = requestAnimationFrame(tick);
-        return;
-      }
+      if (lastTimeRef.current === null) lastTimeRef.current = timestamp;
       const dt = (timestamp - lastTimeRef.current) / 1000;
       lastTimeRef.current = timestamp;
-      const increment = (dt * speed) / BASE_DURATION;
-      const next = Math.min(progressRef.current + increment, 1);
-      setProgress(next);
+      const step = (dt * speed) / BASE_DURATION;
+      const next = Math.min(1, progressRef.current + step);
       progressRef.current = next;
+      setProgress(next);
       if (next < 1) {
         rafRef.current = requestAnimationFrame(tick);
       } else {
@@ -155,13 +167,10 @@ export default function RaceReplay({ horses, colors, distance }: RaceReplayProps
   const isFinished = progress >= 1;
 
   const horseStates = useMemo(() => {
-    const n = horses.length;
     return horses.map((h, i) => {
       const interp = lerpGate(h.gates, progress, distance);
       const finished = progress >= 1;
       const currentPosition = finished ? h.finish : interp.position;
-      // Scale offset by field size so all horses visibly move
-      // Max spread: ~15% of progress between 1st and last
       const maxSpread = 0.15 * progress;
       const positionOffset = ((currentPosition - 1) / Math.max(1, n - 1)) * maxSpread;
       const horseX = Math.max(0, Math.min(1, progress - positionOffset));
@@ -174,7 +183,7 @@ export default function RaceReplay({ horses, colors, distance }: RaceReplayProps
         lane: i,
       };
     });
-  }, [horses, colors, progress, distance]);
+  }, [horses, colors, progress, distance, n]);
 
   const sorted = [...horseStates].sort((a, b) => a.currentPosition - b.currentPosition);
   const leader = sorted[0];
@@ -196,66 +205,164 @@ export default function RaceReplay({ horses, colors, distance }: RaceReplayProps
     lastTimeRef.current = null;
   };
 
+  // Furlong markers
+  const furlongMarks = [];
+  for (let f = 1; f < distance; f++) {
+    furlongMarks.push({ furlong: f, pct: f / distance });
+  }
+
   return (
     <div className="w-full select-none rounded-xl overflow-hidden" style={{ background: BG_DARK }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5" style={{ borderBottom: `1px solid ${BORDER_DARK}` }}>
+      <div
+        className="flex items-center justify-between px-4 py-2"
+        style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+      >
         <div className="flex items-center gap-3">
-          <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: isFinished ? GOLD : playing ? "#ef4444" : TEXT_MUTED }}>
-            {isFinished ? "Race Complete" : playing ? "Playing" : "Paused"}
+          <span
+            className="text-[10px] font-bold uppercase tracking-widest"
+            style={{ color: isFinished ? GOLD : playing ? "#ef4444" : TEXT_DIM }}
+          >
+            {isFinished ? "Finished" : playing ? "Playing" : "Ready"}
           </span>
-          <span className="text-xs font-mono" style={{ color: GOLD }}>
+          <span className="text-xs font-mono font-bold" style={{ color: GOLD }}>
             {(progress * distance).toFixed(1)}f / {distance}f
           </span>
         </div>
-        {leader && (
+        {leader && (progress > 0.05 || isFinished) && (
           <div className="flex items-center gap-2">
-            <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.4)" }}>Leader:</span>
-            <div className="w-2.5 h-2.5 rounded-full" style={{ background: leader.color }} />
-            <span className="text-xs font-bold" style={{ color: "#fff" }}>{leader.name}</span>
+            <span className="text-[10px]" style={{ color: TEXT_DIM }}>
+              {isFinished ? "Winner:" : "Leader:"}
+            </span>
+            <div className="w-2.5 h-2.5 rounded-sm" style={{ background: leader.color }} />
+            <span className="text-xs font-bold" style={{ color: TEXT_WHITE }}>{leader.name}</span>
             <span className="text-[10px] font-mono" style={{ color: GOLD }}>{leader.currentSpeed} ft/s</span>
           </div>
         )}
       </div>
 
-      {/* Race lanes */}
-      <div className="relative" style={{ padding: "6px 0" }}>
-        {/* Finish line */}
-        <div className="absolute top-0 bottom-0" style={{ right: 32, width: 3, background: `repeating-linear-gradient(180deg, #fff 0px, #fff 4px, ${BG_DARK} 4px, ${BG_DARK} 8px)`, opacity: 0.3 }} />
-
-        {/* Quarter markers */}
-        {[0.25, 0.5, 0.75].map((mark) => (
-          <div key={mark} className="absolute top-0 bottom-0" style={{ left: `${LABEL_WIDTH + mark * (100 - 15)}%`, width: 1, background: "rgba(255,255,255,0.04)" }}>
-            <span className="absolute -top-0.5 -translate-x-1/2 text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.2)" }}>
-              {Math.round(mark * distance)}f
-            </span>
+      {/* Track area */}
+      <div className="relative">
+        {/* Furlong markers */}
+        <div className="relative h-4" style={{ marginLeft: LABEL_WIDTH, marginRight: 24 }}>
+          {furlongMarks.map((m) => (
+            <div
+              key={m.furlong}
+              className="absolute top-0 h-full flex items-center"
+              style={{ left: `${m.pct * 100}%`, transform: "translateX(-50%)" }}
+            >
+              <span className="text-[7px] font-mono" style={{ color: "rgba(255,255,255,0.2)" }}>{m.furlong}f</span>
+            </div>
+          ))}
+          <div className="absolute right-0 top-0 h-full flex items-center">
+            <span className="text-[7px] font-bold font-mono" style={{ color: "#ef4444" }}>FIN</span>
           </div>
+        </div>
+
+        {/* Finish line — checkerboard pattern */}
+        <div
+          className="absolute top-4 bottom-0 z-10"
+          style={{
+            right: 20,
+            width: 6,
+            background: `repeating-linear-gradient(
+              45deg,
+              #fff 0px, #fff 3px,
+              #333 3px, #333 6px
+            )`,
+            opacity: 0.4,
+          }}
+        />
+
+        {/* Furlong vertical lines */}
+        {furlongMarks.map((m) => (
+          <div
+            key={`line-${m.furlong}`}
+            className="absolute top-4 bottom-0"
+            style={{
+              left: `calc(${LABEL_WIDTH}px + ${m.pct * 100}% * (1 - ${(LABEL_WIDTH + 24)}px / 100%))`,
+              width: 1,
+              background: "rgba(255,255,255,0.03)",
+            }}
+          />
         ))}
 
+        {/* Horse lanes */}
         {horseStates.map((h, i) => {
-          const xPercent = h.horseX * 100;
+          const xPct = h.horseX * 100;
+          const isLeader = h.currentPosition === 1;
+          const isPodium = h.currentPosition <= 3;
+
           return (
-            <div key={h.name} className="flex items-center relative" style={{ height: LANE_HEIGHT, background: i % 2 === 0 ? "rgba(255,255,255,0.015)" : "transparent" }}>
-              {/* Label */}
-              <div className="shrink-0 flex items-center gap-1.5 px-2.5" style={{ width: LABEL_WIDTH }}>
-                <div className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white" style={{ background: h.color }}>{i + 1}</div>
-                <span className="text-[10px] font-medium truncate" style={{ color: "rgba(255,255,255,0.7)" }}>{h.name}</span>
+            <div
+              key={h.name}
+              className="flex items-center relative"
+              style={{
+                height: LANE_HEIGHT,
+                background: i % 2 === 0 ? BG_LANE : BG_LANE_ALT,
+                borderBottom: "1px solid rgba(255,255,255,0.03)",
+              }}
+            >
+              {/* Lane label */}
+              <div className="shrink-0 flex items-center gap-2 px-3" style={{ width: LABEL_WIDTH }}>
+                <div
+                  className="w-5 h-5 rounded flex items-center justify-center text-[9px] font-bold"
+                  style={{
+                    background: isLeader && (isGalloping || isFinished) ? GOLD : `${h.color}30`,
+                    color: isLeader && (isGalloping || isFinished) ? "#fff" : h.color,
+                  }}
+                >
+                  {(isGalloping || isFinished) ? h.currentPosition : i + 1}
+                </div>
+                <span
+                  className="text-[11px] font-medium truncate"
+                  style={{ color: isLeader && (isGalloping || isFinished) ? GOLD : isPodium && (isGalloping || isFinished) ? TEXT_WHITE : TEXT_DIM }}
+                >
+                  {h.name}
+                </span>
               </div>
 
               {/* Track lane */}
-              <div className="flex-1 relative h-full" style={{ marginRight: 32 }}>
-                {/* Trail */}
-                <div className="absolute top-1/2 -translate-y-1/2 h-[2px] rounded-full" style={{ left: 0, width: `${xPercent}%`, background: `linear-gradient(to right, transparent, ${h.color}50)`, transition: "width 0.15s ease-out" }} />
-                {/* Horse */}
-                <div className="absolute top-1/2" style={{ left: `${xPercent}%`, transform: "translate(-100%, -50%)", transition: "left 0.15s ease-out" }}>
-                  <HorseSilhouette color={h.color} galloping={isGalloping} size={32} />
+              <div className="flex-1 relative h-full" style={{ marginRight: 28 }}>
+                {/* Trail with gradient */}
+                <div
+                  className="absolute top-1/2 -translate-y-1/2 h-[3px] rounded-full"
+                  style={{
+                    left: 0,
+                    width: `${xPct}%`,
+                    background: `linear-gradient(to right, transparent 0%, ${h.color}25 30%, ${h.color}60 100%)`,
+                    willChange: "width",
+                    transition: "width 0.06s linear",
+                  }}
+                />
+
+                {/* Horse — GPU-accelerated with gallop keyframe */}
+                <div
+                  className="absolute top-1/2"
+                  style={{
+                    "--hx": `calc(${xPct}% * ${1} - 100%)`,
+                    willChange: "transform",
+                    animation: isGalloping
+                      ? "gallop 0.5s ease-in-out infinite"
+                      : "gallop-still 0s linear forwards",
+                    transformOrigin: "center bottom",
+                  } as React.CSSProperties}
+                >
+                  <HorseSilhouette color={h.color} size={30} />
                 </div>
               </div>
 
               {/* Position + speed */}
-              <div className="absolute right-1 flex items-center gap-1 text-[8px] font-mono" style={{ color: h.currentPosition <= 3 ? GOLD : "rgba(255,255,255,0.25)" }}>
-                <span className="font-bold">{h.currentPosition}</span>
-                <span style={{ color: "rgba(255,255,255,0.2)" }}>{h.currentSpeed}</span>
+              <div
+                className="absolute right-1 flex items-center gap-1 text-[8px] font-mono"
+                style={{ color: isPodium && (isGalloping || isFinished) ? GOLD : "rgba(255,255,255,0.2)" }}
+              >
+                {(isGalloping || isFinished) && (
+                  <>
+                    <span className="font-bold">{ordinal(h.currentPosition)}</span>
+                    <span style={{ color: "rgba(255,255,255,0.15)" }}>{h.currentSpeed}</span>
+                  </>
+                )}
               </div>
             </div>
           );
@@ -264,45 +371,71 @@ export default function RaceReplay({ horses, colors, distance }: RaceReplayProps
 
       {/* Top 3 bar */}
       {isFinished && (
-        <div className="flex items-center gap-4 px-4 py-2" style={{ borderTop: `1px solid ${BORDER_DARK}` }}>
-          {sorted.slice(0, 3).map((h, i) => {
-            const medals = ["🥇", "🥈", "🥉"];
-            return (
-              <div key={h.name} className="flex items-center gap-1.5">
-                <span className="text-sm">{medals[i]}</span>
-                <div className="w-2 h-2 rounded-full" style={{ background: h.color }} />
-                <span className="text-[10px] font-bold" style={{ color: i === 0 ? "#fff" : "rgba(255,255,255,0.5)" }}>{h.name}</span>
-              </div>
-            );
-          })}
+        <div
+          className="flex items-center gap-1 px-3 py-2 overflow-x-auto"
+          style={{ background: "rgba(255,255,255,0.03)", borderTop: "1px solid rgba(255,255,255,0.06)" }}
+        >
+          {sorted.slice(0, 3).map((h, i) => (
+            <div key={h.name} className="flex items-center gap-1.5 shrink-0 px-2 py-1 rounded"
+              style={{
+                background: i === 0 ? `${GOLD}15` : "transparent",
+                border: i === 0 ? `1px solid ${GOLD}30` : "1px solid transparent",
+              }}>
+              <span className="text-[10px] font-bold" style={{ color: i === 0 ? GOLD : TEXT_DIM }}>
+                {ordinal(i + 1)}
+              </span>
+              <div className="w-2.5 h-2.5 rounded-sm" style={{ background: h.color }} />
+              <span className="text-[10px] font-semibold" style={{ color: i === 0 ? TEXT_WHITE : TEXT_DIM }}>
+                {h.name}
+              </span>
+            </div>
+          ))}
         </div>
       )}
 
       {/* Controls */}
-      <div className="flex items-center gap-2.5 px-4 py-2.5" style={{ borderTop: `1px solid ${BORDER_DARK}` }}>
+      <div
+        className="flex items-center gap-3 px-4 py-3"
+        style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+      >
         {/* Play/Pause */}
         <button
           onClick={togglePlay}
-          className="flex h-8 w-8 items-center justify-center rounded-lg font-bold transition-transform active:scale-90"
-          style={{ background: GOLD, color: "#fff", fontSize: 12 }}
+          className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
+          style={{ background: GOLD, color: "#fff" }}
         >
-          {progress >= 1 ? (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+          {isFinished ? (
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+              <path d="M2 1l10 6-10 6z" />
+            </svg>
           ) : playing ? (
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="3" width="5" height="18" rx="1"/><rect x="14" y="3" width="5" height="18" rx="1"/></svg>
+            <svg width="12" height="14" viewBox="0 0 12 14" fill="currentColor">
+              <rect x="1" y="1" width="3.5" height="12" rx="1" />
+              <rect x="7.5" y="1" width="3.5" height="12" rx="1" />
+            </svg>
           ) : (
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+              <path d="M2 1l10 6-10 6z" />
+            </svg>
           )}
         </button>
 
-        {/* Speed */}
+        {/* Speed buttons */}
         {[1, 2, 4].map((s) => (
-          <button key={s} onClick={() => setSpeed(s)} className="rounded-full px-2 py-1 font-semibold transition-colors" style={{ background: speed === s ? GOLD : "rgba(255,255,255,0.06)", color: speed === s ? "#fff" : TEXT_MUTED, fontSize: 11 }}>
+          <button
+            key={s}
+            onClick={() => setSpeed(s)}
+            className="px-2 py-1 rounded text-[10px] font-bold transition-colors"
+            style={{
+              background: speed === s ? GOLD : "rgba(255,255,255,0.06)",
+              color: speed === s ? "#fff" : TEXT_DIM,
+            }}
+          >
             {s}x
           </button>
         ))}
 
-        {/* Scrubber */}
+        {/* Timeline scrubber */}
         <input
           type="range"
           min={0}
@@ -311,34 +444,30 @@ export default function RaceReplay({ horses, colors, distance }: RaceReplayProps
           value={progress}
           onChange={handleScrub}
           onMouseDown={() => setPlaying(false)}
-          className="flex-1 h-1.5 cursor-pointer appearance-none rounded-full outline-none"
-          style={{ background: `linear-gradient(to right, ${GOLD} ${progress * 100}%, rgba(255,255,255,0.1) ${progress * 100}%)` }}
+          className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer"
+          style={{
+            background: `linear-gradient(to right, ${GOLD} 0%, ${GOLD} ${progress * 100}%, rgba(255,255,255,0.1) ${progress * 100}%, rgba(255,255,255,0.1) 100%)`,
+            accentColor: GOLD,
+          }}
         />
 
-        <span className="text-xs font-mono min-w-[3rem] text-right" style={{ color: GOLD }}>
+        {/* Distance readout */}
+        <span className="text-xs font-mono font-bold shrink-0" style={{ color: GOLD }}>
           {(progress * distance).toFixed(1)}f
         </span>
       </div>
 
-      <style jsx>{`
-        input[type="range"]::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          width: 12px;
-          height: 12px;
-          border-radius: 50%;
-          background: ${GOLD};
-          border: 2px solid #fff;
-          cursor: pointer;
-        }
-        input[type="range"]::-moz-range-thumb {
-          width: 12px;
-          height: 12px;
-          border-radius: 50%;
-          background: ${GOLD};
-          border: 2px solid #fff;
-          cursor: pointer;
-        }
-      `}</style>
+      {/* Progress bar */}
+      <div className="h-0.5" style={{ background: "rgba(255,255,255,0.05)" }}>
+        <div
+          className="h-full"
+          style={{
+            background: isFinished ? GOLD : "#ef4444",
+            width: `${progress * 100}%`,
+            transition: "width 0.06s linear",
+          }}
+        />
+      </div>
     </div>
   );
 }
